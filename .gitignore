@@ -1,1 +1,27 @@
 
+# Environment variables and secrets
+.env
+*.env
+
+# Python virtual environment
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Testing files
+.pytest_cache/
+.coverage
+
+# Frontend dependencies
+node_modules/
+dist/
+
+# IDE files
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+
