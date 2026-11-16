@@ -1,32 +1,28 @@
 
-import sys
-from pathlib import Path
+import os
+from dotenv import load_dotenv
 
-# Add backend directory to Python import path
-BACKEND_DIR = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(BACKEND_DIR))
-
-import pytest
-from app import create_app, db
-from config import TestConfig
-from models.user import User
+load_dotenv()
 
 
-@pytest.fixture
-def app():
-    # Create Flask application using MySQL test configuration
-    app = create_app(TestConfig)
+class Config:
+    SECRET_KEY = os.getenv("SECRET_KEY", "findit-development-key")
 
-    with app.app_context():
-        db.create_all()
+    SQLALCHEMY_DATABASE_URI = (
+        f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:"
+        f"{os.getenv('DB_PASSWORD', 'root')}@"
+        f"{os.getenv('DB_HOST', 'localhost')}/"
+        f"{os.getenv('DB_NAME', 'finditplus')}"
+    )
 
-        yield app
-
-        db.session.remove()
-        db.drop_all()
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 
-@pytest.fixture
-def client(app):
-    # Create test client for API requests
-    return app.test_client()
+class TestConfig(Config):
+    SQLALCHEMY_DATABASE_URI = (
+        f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:"
+        f"{os.getenv('DB_PASSWORD', 'root')}@"
+        f"{os.getenv('DB_HOST', '127.0.0.1')}/finditplus_test"
+    )
+
+    TESTING = True
