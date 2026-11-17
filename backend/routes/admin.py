@@ -12,6 +12,8 @@ from utils.auth_middleware import token_required
 
 admin_bp = Blueprint("admin", __name__)
 
+ALLOWED_ITEM_STATUSES = {"active", "resolved", "removed"}
+
 
 def check_admin():
     """Check whether the logged-in user is an administrator."""
@@ -37,6 +39,29 @@ def serialize_admin_claim(claim):
         "admin_remarks": claim.admin_remarks,
         "status_updated_at": claim.status_updated_at.isoformat(),
         "created_at": claim.created_at.isoformat()
+    }
+
+
+def serialize_admin_item(item):
+    """Return item information including moderation details."""
+    return {
+        "id": item.id,
+        "user_id": item.user_id,
+        "title": item.title,
+        "description": item.description,
+        "category": item.category,
+        "campus": item.campus,
+        "location": item.location,
+        "item_type": item.item_type,
+        "item_date": item.item_date.isoformat(),
+        "image_url": item.image_url,
+        "status": item.status,
+        "admin_remarks": item.admin_remarks,
+        "moderated_at": (
+            item.moderated_at.isoformat()
+            if item.moderated_at else None
+        ),
+        "created_at": item.created_at.isoformat()
     }
 
 
@@ -81,20 +106,7 @@ def get_all_admin_items():
     return jsonify({
         "count": len(items),
         "items": [
-            {
-                "id": item.id,
-                "user_id": item.user_id,
-                "title": item.title,
-                "description": item.description,
-                "category": item.category,
-                "campus": item.campus,
-                "location": item.location,
-                "item_type": item.item_type,
-                "item_date": item.item_date.isoformat(),
-                "image_url": item.image_url,
-                "status": item.status,
-                "created_at": item.created_at.isoformat()
-            }
+            serialize_admin_item(item)
             for item in items
         ]
     }), 200
@@ -196,7 +208,6 @@ def decide_claim(claim_id):
 
         item.status = "claimed"
 
-        # Close other pending claims for the same item.
         other_claims = Claim.query.filter(
             Claim.item_id == item.id,
             Claim.id != claim.id,
@@ -221,4 +232,60 @@ def decide_claim(claim_id):
     return jsonify({
         "message": f"Claim {decision} successfully",
         "claim": serialize_admin_claim(claim)
+    }), 200
+
+
+@admin_bp.route(
+    "/admin/items/<int:item_id>/moderation",
+    methods=["PATCH"]
+)
+@token_required
+def moderate_item(item_id):
+    """Update a report's status and record administrator remarks."""
+
+    access_error = check_admin()
+    if access_error:
+        return access_error
+
+    item = db.session.get(Item, item_id)
+
+    if not item:
+        return jsonify({"message": "Item not found"}), 404
+
+    if item.status == "claimed":
+        return jsonify({
+            "message": "A claimed item cannot be moderated"
+        }), 409
+
+    data = request.get_json(silent=True) or {}
+
+    new_status = data.get("status")
+    remarks = data.get("admin_remarks")
+
+    if new_status not in ALLOWED_ITEM_STATUSES:
+        return jsonify({
+            "message": "Status must be active, resolved, or removed"
+        }), 400
+
+    if not isinstance(remarks, str) or not remarks.strip():
+        return jsonify({
+            "message": "Administrator remarks are required"
+        }), 400
+
+    remarks = remarks.strip()
+
+    if len(remarks) > 2000:
+        return jsonify({
+            "message": "Administrator remarks cannot exceed 2000 characters"
+        }), 400
+
+    item.status = new_status
+    item.admin_remarks = remarks
+    item.moderated_at = datetime.now(timezone.utc)
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Item report updated successfully",
+        "item": serialize_admin_item(item)
     }), 200
