@@ -1,5 +1,7 @@
 
-from flask import Blueprint, jsonify, g
+from datetime import datetime, timezone
+
+from flask import Blueprint, jsonify, request, g
 
 from app import db
 from models.user import User
@@ -12,10 +14,30 @@ admin_bp = Blueprint("admin", __name__)
 
 
 def check_admin():
-    """Check whether the logged-in user has administrator access."""
+    """Check whether the logged-in user is an administrator."""
     if not g.current_user.is_admin:
         return jsonify({"message": "Admin access required"}), 403
     return None
+
+
+def serialize_admin_claim(claim):
+    """Return complete claim information for administrator review."""
+    return {
+        "id": claim.id,
+        "claimant_id": claim.claimant_id,
+        "claimant_name": claim.claimant.name,
+        "claimant_email": claim.claimant.email,
+        "item_id": claim.item_id,
+        "item_title": claim.item.title,
+        "item_image": claim.item.image_url,
+        "ownership_details": claim.ownership_details,
+        "proof_type": claim.proof_type,
+        "proof_details": claim.proof_details,
+        "status": claim.status,
+        "admin_remarks": claim.admin_remarks,
+        "status_updated_at": claim.status_updated_at.isoformat(),
+        "created_at": claim.created_at.isoformat()
+    }
 
 
 @admin_bp.route("/admin/dashboard", methods=["GET"])
@@ -92,20 +114,111 @@ def get_all_admin_claims():
     return jsonify({
         "count": len(claims),
         "claims": [
-            {
-                "id": claim.id,
-                "claimant_id": claim.claimant_id,
-                "claimant_name": claim.claimant.name,
-                "item_id": claim.item_id,
-                "item_title": claim.item.title,
-                "ownership_details": claim.ownership_details,
-                "proof_type": claim.proof_type,
-                "proof_details": claim.proof_details,
-                "status": claim.status,
-                "admin_remarks": claim.admin_remarks,
-                "created_at": claim.created_at.isoformat()
-            }
+            serialize_admin_claim(claim)
             for claim in claims
         ]
     }), 200
 
+
+@admin_bp.route(
+    "/admin/claims/<int:claim_id>",
+    methods=["GET"]
+)
+@token_required
+def get_admin_claim_details(claim_id):
+    """View full details and evidence for one ownership claim."""
+
+    access_error = check_admin()
+    if access_error:
+        return access_error
+
+    claim = db.session.get(Claim, claim_id)
+
+    if not claim:
+        return jsonify({"message": "Claim not found"}), 404
+
+    return jsonify({
+        "claim": serialize_admin_claim(claim)
+    }), 200
+
+
+@admin_bp.route(
+    "/admin/claims/<int:claim_id>/decision",
+    methods=["PATCH"]
+)
+@token_required
+def decide_claim(claim_id):
+    """Approve or reject a pending ownership claim."""
+
+    access_error = check_admin()
+    if access_error:
+        return access_error
+
+    claim = db.session.get(Claim, claim_id)
+
+    if not claim:
+        return jsonify({"message": "Claim not found"}), 404
+
+    if claim.status != "pending":
+        return jsonify({
+            "message": "Only pending claims can be reviewed"
+        }), 400
+
+    data = request.get_json(silent=True) or {}
+
+    decision = data.get("status")
+    remarks = data.get("admin_remarks")
+
+    if decision not in {"approved", "rejected"}:
+        return jsonify({
+            "message": "Status must be approved or rejected"
+        }), 400
+
+    if not isinstance(remarks, str) or not remarks.strip():
+        return jsonify({
+            "message": "Administrator remarks are required"
+        }), 400
+
+    remarks = remarks.strip()
+
+    if len(remarks) > 2000:
+        return jsonify({
+            "message": "Administrator remarks cannot exceed 2000 characters"
+        }), 400
+
+    item = db.session.get(Item, claim.item_id)
+
+    if decision == "approved":
+        if item.status != "active":
+            return jsonify({
+                "message": "This item is no longer available for approval"
+            }), 409
+
+        item.status = "claimed"
+
+        # Close other pending claims for the same item.
+        other_claims = Claim.query.filter(
+            Claim.item_id == item.id,
+            Claim.id != claim.id,
+            Claim.status == "pending"
+        ).all()
+
+        now = datetime.now(timezone.utc)
+
+        for other_claim in other_claims:
+            other_claim.status = "rejected"
+            other_claim.admin_remarks = (
+                "Another ownership claim was approved for this item."
+            )
+            other_claim.status_updated_at = now
+
+    claim.status = decision
+    claim.admin_remarks = remarks
+    claim.status_updated_at = datetime.now(timezone.utc)
+
+    db.session.commit()
+
+    return jsonify({
+        "message": f"Claim {decision} successfully",
+        "claim": serialize_admin_claim(claim)
+    }), 200
