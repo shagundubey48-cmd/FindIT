@@ -2,6 +2,8 @@
 from flask import Blueprint, request, jsonify, g, current_app
 from datetime import date
 
+from sqlalchemy import or_
+
 from app import db
 from models.item import Item
 from utils.auth_middleware import token_required
@@ -154,12 +156,13 @@ def upload_image(item_id):
     }), 200
 
 
-# View all active lost and found items, with optional type filter
+# View and search active lost and found items
 @items_bp.route("/items", methods=["GET"])
 @token_required
 def get_items():
     query = Item.query.filter_by(status="active")
 
+    # Filter by lost or found type
     item_type = request.args.get("type", "").strip().lower()
 
     if item_type:
@@ -169,6 +172,30 @@ def get_items():
             }), 400
 
         query = query.filter_by(item_type=item_type)
+
+    # Search in item title and description
+    keyword = request.args.get("q", "").strip()
+
+    if keyword:
+        search_term = f"%{keyword}%"
+        query = query.filter(
+            or_(
+                Item.title.ilike(search_term),
+                Item.description.ilike(search_term)
+            )
+        )
+
+    # Filter by category
+    category = request.args.get("category", "").strip()
+
+    if category:
+        query = query.filter(Item.category.ilike(category))
+
+    # Filter by campus
+    campus = request.args.get("campus", "").strip()
+
+    if campus:
+        query = query.filter(Item.campus.ilike(campus))
 
     items = query.order_by(
         Item.created_at.desc(),
