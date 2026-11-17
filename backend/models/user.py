@@ -1,3 +1,4 @@
+
 from app import db
 from datetime import datetime, timezone
 
@@ -10,8 +11,9 @@ class User(db.Model):
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
 
-    # Email verification fields
     is_verified = db.Column(db.Boolean, default=False, nullable=False)
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
+
     verification_token_hash = db.Column(db.String(64), nullable=True)
     verification_token_expires_at = db.Column(db.DateTime, nullable=True)
 
