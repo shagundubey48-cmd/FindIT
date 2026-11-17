@@ -1,62 +1,45 @@
 
-const categories = [
-  "Electronics",
-  "Accessories",
-  "Bags",
-  "Stationery",
-  "Clothing",
-  "Documents",
-  "Other",
-];
-
-const campuses = [
-  "JIIT Sector 62",
-  "JIIT Sector 128",
-];
-
-export default function FilterBar({ filters, setFilters }) {
-
-  const handleChange = (e) => {
-    setFilters({
-      ...filters,
-      [e.target.name]: e.target.value,
-    });
-  };
-
+export default function FilterBar({
+  category,
+  campus,
+  onCategoryChange,
+  onCampusChange,
+  onClear
+}) {
   return (
-    <div className="grid sm:grid-cols-2 gap-4">
-
+    <div className="flex flex-col gap-3 sm:flex-row">
       <select
-        name="category"
-        value={filters.category}
-        onChange={handleChange}
-        className="border rounded-xl p-3 bg-white outline-none focus:ring-2 focus:ring-primary"
+        value={category}
+        onChange={(event) => onCategoryChange(event.target.value)}
+        className="rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none focus:border-indigo-500"
       >
         <option value="">All Categories</option>
-
-        {categories.map((category) => (
-          <option key={category} value={category}>
-            {category}
-          </option>
-        ))}
+        <option value="Electronics">Electronics</option>
+        <option value="Accessories">Accessories</option>
+        <option value="Bags">Bags</option>
+        <option value="Clothing">Clothing</option>
+        <option value="Stationery">Stationery</option>
+        <option value="Documents">Documents</option>
+        <option value="Other">Other</option>
       </select>
 
       <select
-        name="campus"
-        value={filters.campus}
-        onChange={handleChange}
-        className="border rounded-xl p-3 bg-white outline-none focus:ring-2 focus:ring-primary"
+        value={campus}
+        onChange={(event) => onCampusChange(event.target.value)}
+        className="rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none focus:border-indigo-500"
       >
         <option value="">All Campuses</option>
-
-        {campuses.map((campus) => (
-          <option key={campus} value={campus}>
-            {campus}
-          </option>
-        ))}
+        <option value="JIIT Sector 62">JIIT Sector 62</option>
+        <option value="JIIT Sector 128">JIIT Sector 128</option>
       </select>
 
+      <button
+        type="button"
+        onClick={onClear}
+        className="rounded-lg border border-gray-300 px-4 py-3 text-gray-700 hover:bg-gray-50"
+      >
+        Clear Filters
+      </button>
     </div>
   );
 }
-
