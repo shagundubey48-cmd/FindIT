@@ -7,3 +7,7 @@ pytest
 Flask-Mail
 PyJWT
 cloudinary
+requests
+Pillow
+torch
+transformers
