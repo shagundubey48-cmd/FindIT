@@ -82,9 +82,9 @@ def test_registration_rejects_non_college_email(client):
 def test_registration_accepts_college_email(client):
     response = client.post("/api/register", json={
         "name": "Test Student",
-        "email": "student@jiit.ac.in",
+        "email": "student@mail.jiit.ac.in",
         "password": "Test@123"
     })
 
     assert response.status_code == 201
-
+    assert response.json["message"] == "Registration successful"
