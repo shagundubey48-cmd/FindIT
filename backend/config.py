@@ -1,5 +1,7 @@
+
 import os
 from dotenv import load_dotenv
+from sqlalchemy.engine import URL
 
 load_dotenv()
 
@@ -9,11 +11,14 @@ class Config:
 
     ALLOWED_EMAIL_DOMAINS = ["mail.jiit.ac.in"]
 
-    SQLALCHEMY_DATABASE_URI = (
-        f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:"
-        f"{os.getenv('DB_PASSWORD', 'root')}@"
-        f"{os.getenv('DB_HOST', 'localhost')}/"
-        f"{os.getenv('DB_NAME', 'finditplus')}"
+    # MySQL database connection
+    SQLALCHEMY_DATABASE_URI = URL.create(
+        drivername="mysql+pymysql",
+        username=os.getenv("DB_USER", "root"),
+        password=os.getenv("DB_PASSWORD", "root"),
+        host=os.getenv("DB_HOST", "localhost"),
+        port=int(os.getenv("DB_PORT", "3306")),
+        database=os.getenv("DB_NAME", "finditplus")
     )
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -26,6 +31,7 @@ class Config:
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.getenv("MAIL_USERNAME")
 
+    # Frontend URL
     FRONTEND_URL = os.getenv(
         "FRONTEND_URL",
         "http://localhost:5173"
@@ -38,10 +44,13 @@ class Config:
 
 
 class TestConfig(Config):
-    SQLALCHEMY_DATABASE_URI = (
-        f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:"
-        f"{os.getenv('DB_PASSWORD', 'root')}@"
-        f"{os.getenv('DB_HOST', '127.0.0.1')}/finditplus_test"
+    SQLALCHEMY_DATABASE_URI = URL.create(
+        drivername="mysql+pymysql",
+        username=os.getenv("DB_USER", "root"),
+        password=os.getenv("DB_PASSWORD", "root"),
+        host=os.getenv("DB_HOST", "127.0.0.1"),
+        port=int(os.getenv("DB_PORT", "3306")),
+        database="finditplus_test"
     )
 
     TESTING = True
