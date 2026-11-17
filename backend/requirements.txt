@@ -1,3 +1,4 @@
+
 Flask
 Flask-Cors
 Flask-SQLAlchemy
@@ -9,8 +10,6 @@ PyJWT
 cloudinary
 requests
 Pillow
-torch
-transformers
 qrcode[pil]
 gunicorn
 certifi
