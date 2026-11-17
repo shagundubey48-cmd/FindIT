@@ -18,7 +18,7 @@ ALLOWED_PROOF_TYPES = {
 
 
 def serialize_claim(claim):
-    """Convert a claim and its evidence into JSON-friendly data."""
+    """Convert claim and tracking information into JSON."""
     return {
         "id": claim.id,
         "item_id": claim.item_id,
@@ -28,6 +28,8 @@ def serialize_claim(claim):
         "proof_type": claim.proof_type,
         "proof_details": claim.proof_details,
         "status": claim.status,
+        "admin_remarks": claim.admin_remarks,
+        "status_updated_at": claim.status_updated_at.isoformat(),
         "created_at": claim.created_at.isoformat(),
         "updated_at": claim.updated_at.isoformat()
     }
@@ -111,7 +113,7 @@ def submit_claim(item_id):
 @claims_bp.route("/claims", methods=["GET"])
 @token_required
 def get_my_claims():
-    """View claims submitted by the logged-in user."""
+    """View all claims submitted by the logged-in user."""
 
     claims = Claim.query.filter_by(
         claimant_id=g.current_user.id
@@ -193,7 +195,7 @@ def submit_claim_evidence(claim_id):
 )
 @token_required
 def get_claim_details(claim_id):
-    """View one claim and its verification evidence."""
+    """View one claim and its evidence."""
 
     claim = Claim.query.filter_by(
         id=claim_id,
@@ -205,4 +207,30 @@ def get_claim_details(claim_id):
 
     return jsonify({
         "claim": serialize_claim(claim)
+    }), 200
+
+
+@claims_bp.route(
+    "/claims/<int:claim_id>/status",
+    methods=["GET"]
+)
+@token_required
+def track_claim_status(claim_id):
+    """Track the status and administrator remarks of a claim."""
+
+    claim = Claim.query.filter_by(
+        id=claim_id,
+        claimant_id=g.current_user.id
+    ).first()
+
+    if not claim:
+        return jsonify({"message": "Claim not found"}), 404
+
+    return jsonify({
+        "claim_id": claim.id,
+        "item_id": claim.item_id,
+        "item_title": claim.item.title,
+        "status": claim.status,
+        "admin_remarks": claim.admin_remarks,
+        "status_updated_at": claim.status_updated_at.isoformat()
     }), 200
