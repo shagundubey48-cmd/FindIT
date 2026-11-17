@@ -1,1 +1,6 @@
 
+ALTER TABLE claims
+ADD COLUMN admin_remarks TEXT NULL,
+ADD COLUMN status_updated_at DATETIME NOT NULL
+    DEFAULT CURRENT_TIMESTAMP;
+
