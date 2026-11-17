@@ -1,5 +1,5 @@
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import generate_password_hash
 from sqlalchemy.exc import IntegrityError
 from models.user import User
@@ -48,6 +48,15 @@ def register():
     # Validate email format
     if not is_valid_email(email):
         return jsonify({"message": "Invalid email address"}), 400
+
+    # Check approved college email domain
+    allowed_domains = current_app.config["ALLOWED_EMAIL_DOMAINS"]
+    email_domain = email.rsplit("@", 1)[1]
+
+    if email_domain not in allowed_domains:
+        return jsonify({
+            "message": "Please use your JIIT college email"
+        }), 400
 
     # Validate password strength
     if not is_strong_password(password):
