@@ -1,5 +1,5 @@
 
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, current_app
 from datetime import date
 
 from app import db
@@ -16,12 +16,8 @@ ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 # Validate and prepare item report data
 def validate_item_data(data):
     required_fields = [
-        "title",
-        "description",
-        "category",
-        "campus",
-        "location",
-        "item_date"
+        "title", "description", "category",
+        "campus", "location", "item_date"
     ]
 
     if not data:
@@ -31,11 +27,8 @@ def validate_item_data(data):
         return None, "All fields are required"
 
     text_fields = [
-        "title",
-        "description",
-        "category",
-        "campus",
-        "location"
+        "title", "description", "category",
+        "campus", "location"
     ]
 
     for field in text_fields:
@@ -124,9 +117,14 @@ def upload_image(item_id):
     if not image_file.filename:
         return jsonify({"message": "No image selected"}), 400
 
+    if "." not in image_file.filename:
+        return jsonify({
+            "message": "Only JPG, JPEG, PNG and WEBP images are allowed"
+        }), 400
+
     extension = image_file.filename.rsplit(".", 1)[-1].lower()
 
-    if "." not in image_file.filename or extension not in ALLOWED_IMAGE_EXTENSIONS:
+    if extension not in ALLOWED_IMAGE_EXTENSIONS:
         return jsonify({
             "message": "Only JPG, JPEG, PNG and WEBP images are allowed"
         }), 400
