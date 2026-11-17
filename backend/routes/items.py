@@ -10,12 +10,8 @@ from utils.auth_middleware import token_required
 items_bp = Blueprint("items", __name__)
 
 
-# Create a new lost-item report
-@items_bp.route("/items/lost", methods=["POST"])
-@token_required
-def report_lost_item():
-    data = request.get_json(silent=True)
-
+# Validate and prepare item report data
+def validate_item_data(data):
     required_fields = [
         "title",
         "description",
@@ -26,18 +22,39 @@ def report_lost_item():
     ]
 
     if not data:
-        return jsonify({"message": "Request data is required"}), 400
+        return None, "Request data is required"
 
     if not all(data.get(field) for field in required_fields):
-        return jsonify({"message": "All fields are required"}), 400
+        return None, "All fields are required"
 
-    # Validate item date
+    text_fields = [
+        "title",
+        "description",
+        "category",
+        "campus",
+        "location"
+    ]
+
+    for field in text_fields:
+        if not isinstance(data[field], str) or not data[field].strip():
+            return None, "Fields cannot be empty"
+
     try:
         item_date = date.fromisoformat(data["item_date"])
     except (ValueError, TypeError):
-        return jsonify({"message": "Invalid date format. Use YYYY-MM-DD"}), 400
+        return None, "Invalid date format. Use YYYY-MM-DD"
 
-    # Create lost-item record
+    return item_date, None
+
+
+# Create a lost or found item report
+def create_item_report(item_type):
+    data = request.get_json(silent=True)
+    item_date, error = validate_item_data(data)
+
+    if error:
+        return jsonify({"message": error}), 400
+
     item = Item(
         user_id=g.current_user.id,
         title=data["title"].strip(),
@@ -45,26 +62,16 @@ def report_lost_item():
         category=data["category"].strip(),
         campus=data["campus"].strip(),
         location=data["location"].strip(),
-        item_type="lost",
+        item_type=item_type,
         item_date=item_date,
         status="active"
     )
-
-    # Reject empty text fields
-    if not all([
-        item.title,
-        item.description,
-        item.category,
-        item.campus,
-        item.location
-    ]):
-        return jsonify({"message": "Fields cannot be empty"}), 400
 
     db.session.add(item)
     db.session.commit()
 
     return jsonify({
-        "message": "Lost item reported successfully",
+        "message": f"{item_type.capitalize()} item reported successfully",
         "item": {
             "id": item.id,
             "title": item.title,
@@ -78,3 +85,16 @@ def report_lost_item():
         }
     }), 201
 
+
+# Report a lost item
+@items_bp.route("/items/lost", methods=["POST"])
+@token_required
+def report_lost_item():
+    return create_item_report("lost")
+
+
+# Report a found item
+@items_bp.route("/items/found", methods=["POST"])
+@token_required
+def report_found_item():
+    return create_item_report("found")
