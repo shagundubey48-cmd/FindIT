@@ -5,9 +5,12 @@ from datetime import date
 from app import db
 from models.item import Item
 from utils.auth_middleware import token_required
+from services.cloudinary_service import upload_item_image
 
 
 items_bp = Blueprint("items", __name__)
+
+ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 
 
 # Validate and prepare item report data
@@ -81,6 +84,7 @@ def create_item_report(item_type):
             "location": item.location,
             "item_type": item.item_type,
             "item_date": item.item_date.isoformat(),
+            "image_url": item.image_url,
             "status": item.status
         }
     }), 201
@@ -98,3 +102,46 @@ def report_lost_item():
 @token_required
 def report_found_item():
     return create_item_report("found")
+
+
+# Upload an image for an item owned by the logged-in user
+@items_bp.route("/items/<int:item_id>/image", methods=["POST"])
+@token_required
+def upload_image(item_id):
+    item = Item.query.filter_by(
+        id=item_id,
+        user_id=g.current_user.id
+    ).first()
+
+    if not item:
+        return jsonify({"message": "Item not found"}), 404
+
+    if "image" not in request.files:
+        return jsonify({"message": "Image file is required"}), 400
+
+    image_file = request.files["image"]
+
+    if not image_file.filename:
+        return jsonify({"message": "No image selected"}), 400
+
+    extension = image_file.filename.rsplit(".", 1)[-1].lower()
+
+    if "." not in image_file.filename or extension not in ALLOWED_IMAGE_EXTENSIONS:
+        return jsonify({
+            "message": "Only JPG, JPEG, PNG and WEBP images are allowed"
+        }), 400
+
+    try:
+        image_url = upload_item_image(image_file)
+    except Exception:
+        current_app.logger.exception("Cloudinary image upload failed")
+        return jsonify({"message": "Image upload failed"}), 502
+
+    item.image_url = image_url
+    db.session.commit()
+
+    return jsonify({
+        "message": "Image uploaded successfully",
+        "image_url": item.image_url,
+        "item_id": item.id
+    }), 200
