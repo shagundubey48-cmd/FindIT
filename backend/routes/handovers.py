@@ -2,6 +2,7 @@
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request, g
+from sqlalchemy import or_
 
 from app import db
 from models.handover import Handover
@@ -145,7 +146,7 @@ def get_my_handovers():
         Item,
         Handover.item_id == Item.id
     ).filter(
-        db.or_(
+        or_(
             Handover.received_by == g.current_user.id,
             Item.user_id == g.current_user.id
         )
@@ -160,4 +161,3 @@ def get_my_handovers():
             for handover in handovers
         ]
     }), 200
-
