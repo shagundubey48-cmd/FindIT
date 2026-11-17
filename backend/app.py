@@ -1,4 +1,3 @@
-
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -29,6 +28,11 @@ def create_app(config_class=Config):
     from routes.admin import admin_bp
     from routes.handovers import handovers_bp
     from routes.feedback import feedback_bp
+    from routes.secret_question import secret_question_bp
+    from routes.qr_codes import qr_codes_bp
+    from routes.messages import messages_bp
+    from routes.unclaimed import unclaimed_bp
+    from routes.statistics import statistics_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(items_bp, url_prefix="/api")
@@ -39,6 +43,11 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp, url_prefix="/api")
     app.register_blueprint(handovers_bp, url_prefix="/api")
     app.register_blueprint(feedback_bp, url_prefix="/api")
+    app.register_blueprint(secret_question_bp, url_prefix="/api")
+    app.register_blueprint(qr_codes_bp, url_prefix="/api")
+    app.register_blueprint(messages_bp, url_prefix="/api")
+    app.register_blueprint(unclaimed_bp, url_prefix="/api")
+    app.register_blueprint(statistics_bp, url_prefix="/api")
 
     return app
 
