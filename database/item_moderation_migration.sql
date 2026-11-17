@@ -1,1 +1,5 @@
 
+ALTER TABLE items
+ADD COLUMN admin_remarks TEXT NULL,
+ADD COLUMN moderated_at DATETIME NULL;
+
