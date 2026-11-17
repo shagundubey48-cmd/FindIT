@@ -12,3 +12,4 @@ Pillow
 torch
 transformers
 qrcode[pil]
+gunicorn
