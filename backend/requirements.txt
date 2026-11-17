@@ -6,3 +6,4 @@ python-dotenv
 pytest
 Flask-Mail
 PyJWT
+cloudinary
