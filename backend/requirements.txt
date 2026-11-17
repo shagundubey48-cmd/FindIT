@@ -13,3 +13,4 @@ torch
 transformers
 qrcode[pil]
 gunicorn
+certifi
