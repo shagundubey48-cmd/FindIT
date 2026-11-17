@@ -21,10 +21,12 @@ def create_app(config_class=Config):
     from routes.auth import auth_bp
     from routes.items import items_bp
     from routes.image_matching import image_matching_bp
+    from routes.combined_matching import combined_matching_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(items_bp, url_prefix="/api")
     app.register_blueprint(image_matching_bp, url_prefix="/api")
+    app.register_blueprint(combined_matching_bp, url_prefix="/api")
 
     return app
 
