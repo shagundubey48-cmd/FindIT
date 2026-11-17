@@ -7,6 +7,7 @@ import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 
 import "./index.css";
+import { NotificationProvider } from "./context/NotificationContext";
 
 ReactDOM.createRoot(
   document.getElementById("root")
@@ -14,7 +15,9 @@ ReactDOM.createRoot(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <NotificationProvider>
+          <App />
+        </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
