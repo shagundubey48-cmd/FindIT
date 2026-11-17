@@ -9,15 +9,24 @@ from utils.auth_middleware import token_required
 
 claims_bp = Blueprint("claims", __name__)
 
+ALLOWED_PROOF_TYPES = {
+    "identifying_mark",
+    "serial_number",
+    "purchase_proof",
+    "other"
+}
+
 
 def serialize_claim(claim):
-    """Convert a claim into JSON-friendly data."""
+    """Convert a claim and its evidence into JSON-friendly data."""
     return {
         "id": claim.id,
         "item_id": claim.item_id,
         "item_title": claim.item.title,
         "item_image": claim.item.image_url,
         "ownership_details": claim.ownership_details,
+        "proof_type": claim.proof_type,
+        "proof_details": claim.proof_details,
         "status": claim.status,
         "created_at": claim.created_at.isoformat(),
         "updated_at": claim.updated_at.isoformat()
@@ -118,3 +127,82 @@ def get_my_claims():
         ]
     }), 200
 
+
+@claims_bp.route(
+    "/claims/<int:claim_id>/evidence",
+    methods=["PUT"]
+)
+@token_required
+def submit_claim_evidence(claim_id):
+    """Submit or update additional ownership verification evidence."""
+
+    claim = Claim.query.filter_by(
+        id=claim_id,
+        claimant_id=g.current_user.id
+    ).first()
+
+    if not claim:
+        return jsonify({"message": "Claim not found"}), 404
+
+    if claim.status != "pending":
+        return jsonify({
+            "message": "Evidence can only be updated for pending claims"
+        }), 400
+
+    data = request.get_json(silent=True) or {}
+
+    proof_type = data.get("proof_type")
+    proof_details = data.get("proof_details")
+
+    if not isinstance(proof_type, str) or proof_type not in ALLOWED_PROOF_TYPES:
+        return jsonify({
+            "message": "Select a valid proof type"
+        }), 400
+
+    if not isinstance(proof_details, str):
+        return jsonify({
+            "message": "Proof details must be text"
+        }), 400
+
+    proof_details = proof_details.strip()
+
+    if not proof_details:
+        return jsonify({
+            "message": "Proof details are required"
+        }), 400
+
+    if len(proof_details) > 2000:
+        return jsonify({
+            "message": "Proof details cannot exceed 2000 characters"
+        }), 400
+
+    claim.proof_type = proof_type
+    claim.proof_details = proof_details
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Ownership evidence submitted successfully",
+        "claim": serialize_claim(claim)
+    }), 200
+
+
+@claims_bp.route(
+    "/claims/<int:claim_id>",
+    methods=["GET"]
+)
+@token_required
+def get_claim_details(claim_id):
+    """View one claim and its verification evidence."""
+
+    claim = Claim.query.filter_by(
+        id=claim_id,
+        claimant_id=g.current_user.id
+    ).first()
+
+    if not claim:
+        return jsonify({"message": "Claim not found"}), 404
+
+    return jsonify({
+        "claim": serialize_claim(claim)
+    }), 200
