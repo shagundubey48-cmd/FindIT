@@ -8,7 +8,7 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "findit-development-key")
     # Approved college email domains
-    ALLOWED_EMAIL_DOMAINS = ["jiit.ac.in"]
+    ALLOWED_EMAIL_DOMAINS = ["mail.jiit.ac.in"]
 
     SQLALCHEMY_DATABASE_URI = (
         f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:"
