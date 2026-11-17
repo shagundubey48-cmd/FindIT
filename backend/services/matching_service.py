@@ -15,7 +15,6 @@ def calculate_similarity(text1, text2):
     if not words1 or not words2:
         return 0
 
-    # No common words means no text similarity.
     if not words1.intersection(words2):
         return 0
 
@@ -68,6 +67,17 @@ def find_text_matches(item):
     matches = []
 
     for candidate in candidates:
+        title_score = calculate_similarity(
+            item.title, candidate.title
+        )
+        description_score = calculate_similarity(
+            item.description, candidate.description
+        )
+
+        # Require at least some title or description similarity.
+        if title_score == 0 and description_score == 0:
+            continue
+
         score = calculate_match_score(item, candidate)
 
         if score >= 20:
