@@ -10,24 +10,21 @@ from extensions import mail
 db = SQLAlchemy()
 
 
-# Create and configure the Flask application
 def create_app(config_class=Config):
     app = Flask(__name__)
-
     app.config.from_object(config_class)
 
     CORS(app)
-
     db.init_app(app)
     mail.init_app(app)
 
-    # Register authentication routes
     from routes.auth import auth_bp
-    app.register_blueprint(auth_bp, url_prefix="/api")
-
-    # Register item routes and load the Item model
     from routes.items import items_bp
+    from routes.image_matching import image_matching_bp
+
+    app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(items_bp, url_prefix="/api")
+    app.register_blueprint(image_matching_bp, url_prefix="/api")
 
     return app
 
@@ -35,6 +32,5 @@ def create_app(config_class=Config):
 app = create_app()
 
 
-# Run the application locally
 if __name__ == "__main__":
     app.run(debug=True)
