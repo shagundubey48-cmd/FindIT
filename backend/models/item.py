@@ -18,7 +18,6 @@ class Item(db.Model):
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=False)
     category = db.Column(db.String(100), nullable=False)
-
     campus = db.Column(db.String(100), nullable=False)
     location = db.Column(db.String(200), nullable=False)
 
@@ -29,7 +28,6 @@ class Item(db.Model):
     )
 
     item_date = db.Column(db.Date, nullable=False)
-
     image_url = db.Column(db.String(500), nullable=True)
 
     status = db.Column(
@@ -38,10 +36,13 @@ class Item(db.Model):
         default="active"
     )
 
+    admin_remarks = db.Column(db.Text, nullable=True)
+
+    moderated_at = db.Column(db.DateTime, nullable=True)
+
     created_at = db.Column(
         db.DateTime,
         default=lambda: datetime.now(timezone.utc)
     )
 
     user = db.relationship("User", backref="items")
-
