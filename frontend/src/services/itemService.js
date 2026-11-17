@@ -2,48 +2,36 @@
 import api from "./api";
 
 const itemService = {
+  async getItems(filters = {}) {
+    const params = {};
 
-  // Get all items with optional filters
-  getItems: async (filters = {}) => {
-    const response = await api.get("/items", {
-      params: filters,
-    });
+    if (filters.q?.trim()) params.q = filters.q.trim();
+    if (filters.type) params.type = filters.type;
+    if (filters.category) params.category = filters.category;
+    if (filters.campus) params.campus = filters.campus;
 
+    const response = await api.get("/items", { params });
     return response.data;
   },
 
-  // Get lost items
-  getLostItems: async (filters = {}) => {
-    return itemService.getItems({
-      ...filters,
-      type: "lost",
-    });
+  async getItemById(itemId) {
+    const response = await api.get(`/items/${itemId}`);
+    return response.data.item;
   },
 
-  // Get found items
-  getFoundItems: async (filters = {}) => {
-    return itemService.getItems({
-      ...filters,
-      type: "found",
-    });
-  },
-
-  // Report lost item
-  reportLost: async (itemData) => {
+  async reportLostItem(itemData) {
     const response = await api.post("/items/lost", itemData);
     return response.data;
   },
 
-  // Report found item
-  reportFound: async (itemData) => {
+  async reportFoundItem(itemData) {
     const response = await api.post("/items/found", itemData);
     return response.data;
   },
 
-  // Upload image after item creation
-  uploadImage: async (itemId, image) => {
+  async uploadImage(itemId, imageFile) {
     const formData = new FormData();
-    formData.append("image", image);
+    formData.append("image", imageFile);
 
     const response = await api.post(
       `/items/${itemId}/image`,
@@ -53,40 +41,20 @@ const itemService = {
     return response.data;
   },
 
-  // Get single item
-  getItemDetails: async (itemId) => {
-    const response = await api.get(`/items/${itemId}`);
+  async updateItem(itemId, itemData) {
+    const response = await api.put(`/items/${itemId}`, itemData);
     return response.data;
   },
 
-  // Update item
-  updateItem: async (itemId, itemData) => {
-    const response = await api.put(
-      `/items/${itemId}`,
-      itemData
-    );
-
+  async withdrawItem(itemId) {
+    const response = await api.patch(`/items/${itemId}/withdraw`);
     return response.data;
   },
 
-  // Withdraw item
-  withdrawItem: async (itemId) => {
-    const response = await api.patch(
-      `/items/${itemId}/withdraw`
-    );
-
+  async getMatches(itemId) {
+    const response = await api.get(`/items/${itemId}/matches`);
     return response.data;
-  },
-
-  // Get text matching results
-  getMatches: async (itemId) => {
-    const response = await api.get(
-      `/items/${itemId}/matches`
-    );
-
-    return response.data;
-  },
+  }
 };
 
 export default itemService;
-
