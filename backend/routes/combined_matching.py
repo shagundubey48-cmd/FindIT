@@ -1,9 +1,11 @@
 
 from flask import Blueprint, jsonify
+
 from models.item import Item
 from utils.auth_middleware import token_required
 from services.matching_service import calculate_match_score
 from services.image_matching_service import calculate_image_similarity
+from services.notification_service import create_match_notifications
 
 
 combined_matching_bp = Blueprint("combined_matching", __name__)
@@ -15,7 +17,7 @@ combined_matching_bp = Blueprint("combined_matching", __name__)
 )
 @token_required
 def get_matched_items(item_id):
-    """Return text and image matches together in ranked order."""
+    """Return ranked text and image matches and notify both item owners."""
 
     item = Item.query.get(item_id)
 
@@ -35,7 +37,6 @@ def get_matched_items(item_id):
 
     for candidate in candidates:
         text_score = calculate_match_score(item, candidate)
-
         image_score = None
 
         if item.image_url and candidate.image_url:
@@ -45,10 +46,8 @@ def get_matched_items(item_id):
                     candidate.image_url
                 )
             except Exception:
-                # Continue with text matching if image comparison fails.
                 image_score = None
 
-        # Keep a candidate if either matching method finds a match.
         if text_score < 20 and (
             image_score is None or image_score < 70
         ):
@@ -67,6 +66,9 @@ def get_matched_items(item_id):
             match_type = "image"
         else:
             match_type = "text"
+
+        # Create an in-app notification for both item owners.
+        create_match_notifications(item, candidate)
 
         matches.append({
             "id": candidate.id,
@@ -94,4 +96,3 @@ def get_matched_items(item_id):
         "count": len(matches),
         "matches": matches
     }), 200
-
