@@ -20,7 +20,7 @@ def test_registration_requires_email(client):
 def test_registration_requires_password(client):
     response = client.post("/api/register", json={
         "name": "Test Student",
-        "email": "student@jiit.ac.in"
+        "email": "student@mail.jiit.ac.in"
     })
 
     assert response.status_code == 400
@@ -29,7 +29,7 @@ def test_registration_requires_password(client):
 def test_registration_success(client):
     response = client.post("/api/register", json={
         "name": "Test Student",
-        "email": "student@jiit.ac.in",
+        "email": "student@mail.jiit.ac.in",
         "password": "Test@123"
     })
 
@@ -49,7 +49,7 @@ def test_registration_rejects_invalid_email(client):
 def test_registration_rejects_duplicate_email(client):
     data = {
         "name": "Test Student",
-        "email": "student@jiit.ac.in",
+        "email": "student@mail.jiit.ac.in",
         "password": "Test@123"
     }
 
@@ -62,8 +62,29 @@ def test_registration_rejects_duplicate_email(client):
 def test_registration_rejects_weak_password(client):
     response = client.post("/api/register", json={
         "name": "Test Student",
-        "email": "student2@jiit.ac.in",
+        "email": "student2@mail.jiit.ac.in",
         "password": "123"
     })
 
     assert response.status_code == 400
+
+
+def test_registration_rejects_non_college_email(client):
+    response = client.post("/api/register", json={
+        "name": "Test Student",
+        "email": "student@gmail.com",
+        "password": "Test@123"
+    })
+
+    assert response.status_code == 400
+
+
+def test_registration_accepts_college_email(client):
+    response = client.post("/api/register", json={
+        "name": "Test Student",
+        "email": "student@jiit.ac.in",
+        "password": "Test@123"
+    })
+
+    assert response.status_code == 201
+
