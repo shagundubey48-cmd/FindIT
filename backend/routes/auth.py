@@ -1,10 +1,12 @@
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, g
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError
 from models.user import User
 from app import db
 from services.email_service import send_verification_email
+from utils.auth_middleware import token_required
+
 from datetime import datetime, timedelta, timezone
 import re
 import secrets
@@ -51,9 +53,8 @@ def register():
         return jsonify({"message": "Invalid email address"}), 400
 
     allowed_domains = current_app.config["ALLOWED_EMAIL_DOMAINS"]
-    email_domain = email.rsplit("@", 1)[1]
 
-    if email_domain not in allowed_domains:
+    if email.rsplit("@", 1)[1] not in allowed_domains:
         return jsonify({"message": "Please use your JIIT college email"}), 400
 
     if not is_strong_password(password):
@@ -62,9 +63,7 @@ def register():
                        "uppercase, lowercase, number and special character"
         }), 400
 
-    existing_user = User.query.filter_by(email=email).first()
-
-    if existing_user:
+    if User.query.filter_by(email=email).first():
         return jsonify({"message": "Email already registered"}), 409
 
     token = secrets.token_urlsafe(32)
@@ -74,9 +73,7 @@ def register():
         email=email,
         password=generate_password_hash(password),
         is_verified=False,
-        verification_token_hash=hashlib.sha256(
-            token.encode()
-        ).hexdigest(),
+        verification_token_hash=hashlib.sha256(token.encode()).hexdigest(),
         verification_token_expires_at=(
             datetime.now(timezone.utc).replace(tzinfo=None)
             + timedelta(minutes=15)
@@ -115,7 +112,11 @@ def verify_email(token):
     if not user:
         return jsonify({"message": "Invalid verification link"}), 400
 
-    if user.verification_token_expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+    if (
+        not user.verification_token_expires_at
+        or user.verification_token_expires_at
+        < datetime.now(timezone.utc).replace(tzinfo=None)
+    ):
         return jsonify({"message": "Verification link has expired"}), 400
 
     user.is_verified = True
@@ -140,7 +141,6 @@ def login():
 
     user = User.query.filter_by(email=email).first()
 
-    # Use the same message for unknown email and wrong password
     if not user or not check_password_hash(user.password, password):
         return jsonify({"message": "Invalid email or password"}), 401
 
@@ -149,7 +149,6 @@ def login():
             "message": "Please verify your email before logging in"
         }), 403
 
-    # Generate a JWT valid for 24 hours
     token = jwt.encode(
         {
             "sub": str(user.id),
@@ -162,6 +161,54 @@ def login():
     return jsonify({
         "message": "Login successful",
         "token": token,
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email
+        }
+    }), 200
+
+
+# Get the logged-in user's profile
+@auth_bp.route("/profile", methods=["GET"])
+@token_required
+def get_profile():
+    user = g.current_user
+
+    return jsonify({
+        "id": user.id,
+        "name": user.name,
+        "email": user.email,
+        "is_verified": user.is_verified,
+        "created_at": (
+            user.created_at.isoformat() if user.created_at else None
+        )
+    }), 200
+
+
+# Update the logged-in user's profile
+@auth_bp.route("/profile", methods=["PUT"])
+@token_required
+def update_profile():
+    data = request.get_json(silent=True)
+
+    if not data:
+        return jsonify({"message": "Request data is required"}), 400
+
+    user = g.current_user
+
+    if "name" in data:
+        name = data["name"]
+
+        if not isinstance(name, str) or not name.strip():
+            return jsonify({"message": "Name cannot be empty"}), 400
+
+        user.name = name.strip()
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Profile updated successfully",
         "user": {
             "id": user.id,
             "name": user.name,
