@@ -1,4 +1,11 @@
 
+import LostItems from "./pages/LostItems";
+import FoundItems from "./pages/FoundItems";
+import ReportLost from "./pages/ReportLost";
+import ReportFound from "./pages/ReportFound";
+import ItemDetails from "./pages/ItemDetails";
+import MyReports from "./pages/MyReports";
+
 import { Routes, Route, Navigate, Link, Outlet } from "react-router-dom";
 
 import Login from "./pages/Login";
@@ -217,11 +224,23 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/report-lost" element={<Placeholder title="Report Lost Item" />} />
+        
       </Route>
 
       <Route path="/found-items" element={<Placeholder title="Found Items" />} />
 
       <Route path="*" element={<Placeholder title="404 - Page Not Found" />} />
+
+<Route path="/lost-items" element={<LostItems />} />
+
+<Route path="/found-items" element={<FoundItems />} />
+
+<Route element={<ProtectedRoute />}>
+  <Route path="/report-lost" element={<ReportLost />} />
+  <Route path="/report-found" element={<ReportFound />} />
+  <Route path="/my-reports" element={<MyReports />} />
+  <Route path="/items/:id" element={<ItemDetails />} />
+</Route>
 
     </Routes>
   );
