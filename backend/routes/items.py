@@ -43,6 +43,26 @@ def validate_item_data(data):
     return item_date, None
 
 
+# Format item details for API responses
+def serialize_item(item):
+    return {
+        "id": item.id,
+        "user_id": item.user_id,
+        "title": item.title,
+        "description": item.description,
+        "category": item.category,
+        "campus": item.campus,
+        "location": item.location,
+        "item_type": item.item_type,
+        "item_date": item.item_date.isoformat(),
+        "image_url": item.image_url,
+        "status": item.status,
+        "created_at": (
+            item.created_at.isoformat() if item.created_at else None
+        )
+    }
+
+
 # Create a lost or found item report
 def create_item_report(item_type):
     data = request.get_json(silent=True)
@@ -68,18 +88,7 @@ def create_item_report(item_type):
 
     return jsonify({
         "message": f"{item_type.capitalize()} item reported successfully",
-        "item": {
-            "id": item.id,
-            "title": item.title,
-            "description": item.description,
-            "category": item.category,
-            "campus": item.campus,
-            "location": item.location,
-            "item_type": item.item_type,
-            "item_date": item.item_date.isoformat(),
-            "image_url": item.image_url,
-            "status": item.status
-        }
+        "item": serialize_item(item)
     }), 201
 
 
@@ -142,4 +151,48 @@ def upload_image(item_id):
         "message": "Image uploaded successfully",
         "image_url": item.image_url,
         "item_id": item.id
+    }), 200
+
+
+# View all active lost and found items, with optional type filter
+@items_bp.route("/items", methods=["GET"])
+@token_required
+def get_items():
+    query = Item.query.filter_by(status="active")
+
+    item_type = request.args.get("type", "").strip().lower()
+
+    if item_type:
+        if item_type not in ["lost", "found"]:
+            return jsonify({
+                "message": "Type must be either lost or found"
+            }), 400
+
+        query = query.filter_by(item_type=item_type)
+
+    items = query.order_by(
+        Item.created_at.desc(),
+        Item.id.desc()
+    ).all()
+
+    return jsonify({
+        "count": len(items),
+        "items": [serialize_item(item) for item in items]
+    }), 200
+
+
+# View details of one active item
+@items_bp.route("/items/<int:item_id>", methods=["GET"])
+@token_required
+def get_item_details(item_id):
+    item = Item.query.filter_by(
+        id=item_id,
+        status="active"
+    ).first()
+
+    if not item:
+        return jsonify({"message": "Item not found"}), 404
+
+    return jsonify({
+        "item": serialize_item(item)
     }), 200
