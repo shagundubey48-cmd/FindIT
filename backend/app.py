@@ -24,6 +24,7 @@ def create_app(config_class=Config):
     from routes.combined_matching import combined_matching_bp
     from routes.notifications import notifications_bp
     from routes.claims import claims_bp
+    from routes.admin import admin_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(items_bp, url_prefix="/api")
@@ -31,6 +32,7 @@ def create_app(config_class=Config):
     app.register_blueprint(combined_matching_bp, url_prefix="/api")
     app.register_blueprint(notifications_bp, url_prefix="/api")
     app.register_blueprint(claims_bp, url_prefix="/api")
+    app.register_blueprint(admin_bp, url_prefix="/api")
 
     return app
 
