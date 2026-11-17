@@ -4,6 +4,10 @@ from werkzeug.security import generate_password_hash
 from sqlalchemy.exc import IntegrityError
 from models.user import User
 from app import db
+from services.email_service import send_verification_email
+from datetime import datetime, timedelta, timezone
+import secrets
+import hashlib
 import re
 
 auth_bp = Blueprint("auth", __name__)
@@ -71,20 +75,79 @@ def register():
     if existing_user:
         return jsonify({"message": "Email already registered"}), 409
 
-    # Hash password before storing
+    # Generate secure verification token
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+    # Create unverified account
     new_user = User(
         name=name,
         email=email,
-        password=generate_password_hash(password)
+        password=generate_password_hash(password),
+        is_verified=False,
+        verification_token_hash=token_hash,
+        verification_token_expires_at=(
+            datetime.now(timezone.utc).replace(tzinfo=None)
+            + timedelta(minutes=15)
+        )
     )
 
     try:
         db.session.add(new_user)
         db.session.commit()
+
+        # Send verification email
+        send_verification_email(email, token)
+
     except IntegrityError:
         db.session.rollback()
         return jsonify({"message": "Email already registered"}), 409
 
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Registration email could not be sent")
+        return jsonify({
+            "message": "Registration could not be completed"
+        }), 500
+
     return jsonify({
-        "message": "Registration successful"
+        "message": "Registration successful. Please verify your email."
     }), 201
+
+
+# Verify student email
+@auth_bp.route("/verify/<token>", methods=["GET"])
+def verify_email(token):
+
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+    user = User.query.filter_by(
+        verification_token_hash=token_hash
+    ).first()
+
+    if not user:
+        return jsonify({
+            "message": "Invalid verification link"
+        }), 400
+
+    if user.is_verified:
+        return jsonify({
+            "message": "Email already verified"
+        }), 200
+
+    expiry = user.verification_token_expires_at
+
+    if not expiry or expiry <= datetime.now(timezone.utc).replace(tzinfo=None):
+        return jsonify({
+            "message": "Verification link expired"
+        }), 400
+
+    user.is_verified = True
+    user.verification_token_hash = None
+    user.verification_token_expires_at = None
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Email verified successfully"
+    }), 200
