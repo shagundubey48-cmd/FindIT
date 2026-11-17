@@ -1,16 +1,13 @@
 
 import re
 from difflib import SequenceMatcher
-
 from models.item import Item
 
 
-# Convert text into lowercase words for comparison
 def normalize_text(text):
     return set(re.findall(r"[a-z0-9]+", (text or "").lower()))
 
 
-# Calculate similarity between two text fields
 def calculate_similarity(text1, text2):
     words1 = normalize_text(text1)
     words2 = normalize_text(text2)
@@ -18,11 +15,14 @@ def calculate_similarity(text1, text2):
     if not words1 or not words2:
         return 0
 
+    # No common words means no text similarity.
+    if not words1.intersection(words2):
+        return 0
+
     overlap = len(words1.intersection(words2))
     union = len(words1.union(words2))
 
-    jaccard_score = overlap / union if union else 0
-
+    jaccard_score = overlap / union
     sequence_score = SequenceMatcher(
         None,
         " ".join(sorted(words1)),
@@ -32,22 +32,15 @@ def calculate_similarity(text1, text2):
     return max(jaccard_score, sequence_score)
 
 
-# Calculate matching score between two items
 def calculate_match_score(item1, item2):
-    title_score = calculate_similarity(
-        item1.title,
-        item2.title
-    )
-
+    title_score = calculate_similarity(item1.title, item2.title)
     description_score = calculate_similarity(
-        item1.description,
-        item2.description
+        item1.description, item2.description
     )
 
     category_score = (
         1 if item1.category.lower() == item2.category.lower() else 0
     )
-
     campus_score = (
         1 if item1.campus.lower() == item2.campus.lower() else 0
     )
@@ -62,7 +55,6 @@ def calculate_match_score(item1, item2):
     return round(score, 2)
 
 
-# Find possible opposite-type matches for an item
 def find_text_matches(item):
     opposite_type = "found" if item.item_type == "lost" else "lost"
 
@@ -78,7 +70,6 @@ def find_text_matches(item):
     for candidate in candidates:
         score = calculate_match_score(item, candidate)
 
-        # Return only candidates with a meaningful similarity score
         if score >= 20:
             matches.append({
                 "item": candidate,
@@ -90,4 +81,3 @@ def find_text_matches(item):
         key=lambda match: match["score"],
         reverse=True
     )
-
