@@ -23,7 +23,6 @@ class Claim(db.Model):
 
     ownership_details = db.Column(db.Text, nullable=False)
 
-    # Additional ownership verification evidence.
     proof_type = db.Column(db.String(50), nullable=True)
     proof_details = db.Column(db.Text, nullable=True)
 
@@ -31,6 +30,15 @@ class Claim(db.Model):
         db.String(30),
         nullable=False,
         default="pending"
+    )
+
+    admin_remarks = db.Column(db.Text, nullable=True)
+
+    # Tracks when the claim status was last changed.
+    status_updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False
     )
 
     created_at = db.Column(
