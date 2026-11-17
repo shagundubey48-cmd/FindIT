@@ -1,83 +1,71 @@
 
 import { Link } from "react-router-dom";
-import { MapPin, Calendar, Tag } from "lucide-react";
+import { MapPin, CalendarDays, Tag } from "lucide-react";
 
 export default function ItemCard({ item }) {
+  if (!item) return null;
+
   const isLost = item.item_type === "lost";
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition">
-
-      <div className="h-48 bg-gray-100 overflow-hidden">
-
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+      <div className="relative h-48 bg-gray-100">
         {item.image_url ? (
           <img
             src={item.image_url}
             alt={item.title}
-            className="w-full h-full object-cover"
+            className="h-full w-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            No Image Available
+          <div className="flex h-full items-center justify-center text-gray-400">
+            No image available
           </div>
         )}
 
+        <span
+          className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-semibold ${
+            isLost
+              ? "bg-red-100 text-red-700"
+              : "bg-green-100 text-green-700"
+          }`}
+        >
+          {isLost ? "Lost" : "Found"}
+        </span>
       </div>
 
-      <div className="p-5">
-
-        <div className="flex justify-between items-center mb-3">
-
-          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
-            isLost
-              ? "bg-red-100 text-red-600"
-              : "bg-green-100 text-green-600"
-          }`}>
-            {isLost ? "LOST ITEM" : "FOUND ITEM"}
-          </span>
-
-          <span className="text-xs text-gray-400">
-            #{item.id}
-          </span>
-
-        </div>
-
-        <h3 className="text-lg font-bold text-gray-900">
+      <div className="p-4">
+        <h3 className="mb-2 truncate text-lg font-semibold text-gray-900">
           {item.title}
         </h3>
 
-        <p className="text-sm text-gray-500 mt-2 line-clamp-2">
+        <p className="mb-3 line-clamp-2 min-h-10 text-sm text-gray-600">
           {item.description}
         </p>
 
-        <div className="mt-4 space-y-2 text-sm text-gray-500">
+        <div className="space-y-2 text-sm text-gray-500">
+          <div className="flex items-center gap-2">
+            <Tag size={16} />
+            <span>{item.category}</span>
+          </div>
 
-          <p className="flex items-center gap-2">
-            <Tag size={15} />
-            {item.category}
-          </p>
+          <div className="flex items-center gap-2">
+            <MapPin size={16} />
+            <span>{item.location}, {item.campus}</span>
+          </div>
 
-          <p className="flex items-center gap-2">
-            <MapPin size={15} />
-            {item.location}, {item.campus}
-          </p>
-
-          <p className="flex items-center gap-2">
-            <Calendar size={15} />
-            {item.item_date}
-          </p>
-
+          <div className="flex items-center gap-2">
+            <CalendarDays size={16} />
+            <span>{item.item_date}</span>
+          </div>
         </div>
 
         <Link
           to={`/items/${item.id}`}
-          className="block text-center bg-primary text-white py-2.5 rounded-lg mt-5 hover:bg-indigo-700"
+          className="mt-4 block rounded-lg bg-indigo-600 px-4 py-2 text-center text-sm font-medium text-white transition hover:bg-indigo-700"
         >
           View Details
         </Link>
-
       </div>
     </div>
   );
 }
-
