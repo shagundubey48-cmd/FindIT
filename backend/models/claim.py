@@ -23,6 +23,10 @@ class Claim(db.Model):
 
     ownership_details = db.Column(db.Text, nullable=False)
 
+    # Additional ownership verification evidence.
+    proof_type = db.Column(db.String(50), nullable=True)
+    proof_details = db.Column(db.Text, nullable=True)
+
     status = db.Column(
         db.String(30),
         nullable=False,
@@ -44,4 +48,3 @@ class Claim(db.Model):
 
     claimant = db.relationship("User", backref="claims")
     item = db.relationship("Item", backref="claims")
-
