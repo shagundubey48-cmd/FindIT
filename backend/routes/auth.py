@@ -1,14 +1,16 @@
 
 from flask import Blueprint, request, jsonify, current_app
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError
 from models.user import User
 from app import db
 from services.email_service import send_verification_email
 from datetime import datetime, timedelta, timezone
+import re
 import secrets
 import hashlib
-import re
+import jwt
+
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -19,7 +21,7 @@ def is_valid_email(email):
     return bool(re.match(pattern, email))
 
 
-# Validate password strength
+# Check password strength
 def is_strong_password(password):
     return (
         len(password) >= 8
@@ -30,16 +32,12 @@ def is_strong_password(password):
     )
 
 
-# Student registration API
+# Register a new user
 @auth_bp.route("/register", methods=["POST"])
 def register():
-
     data = request.get_json(silent=True)
 
-    # Check required fields
-    if not data or not all(
-        data.get(field) for field in ["name", "email", "password"]
-    ):
+    if not data or not all(data.get(field) for field in ["name", "email", "password"]):
         return jsonify({"message": "All fields are required"}), 400
 
     name = data["name"].strip()
@@ -49,43 +47,36 @@ def register():
     if not name or not email or not password.strip():
         return jsonify({"message": "All fields are required"}), 400
 
-    # Validate email format
     if not is_valid_email(email):
         return jsonify({"message": "Invalid email address"}), 400
 
-    # Check approved college email domain
     allowed_domains = current_app.config["ALLOWED_EMAIL_DOMAINS"]
     email_domain = email.rsplit("@", 1)[1]
 
     if email_domain not in allowed_domains:
-        return jsonify({
-            "message": "Please use your JIIT college email"
-        }), 400
+        return jsonify({"message": "Please use your JIIT college email"}), 400
 
-    # Validate password strength
     if not is_strong_password(password):
         return jsonify({
             "message": "Password must contain at least 8 characters, "
                        "uppercase, lowercase, number and special character"
         }), 400
 
-    # Check duplicate email
     existing_user = User.query.filter_by(email=email).first()
 
     if existing_user:
         return jsonify({"message": "Email already registered"}), 409
 
-    # Generate secure verification token
     token = secrets.token_urlsafe(32)
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
 
-    # Create unverified account
     new_user = User(
         name=name,
         email=email,
         password=generate_password_hash(password),
         is_verified=False,
-        verification_token_hash=token_hash,
+        verification_token_hash=hashlib.sha256(
+            token.encode()
+        ).hexdigest(),
         verification_token_expires_at=(
             datetime.now(timezone.utc).replace(tzinfo=None)
             + timedelta(minutes=15)
@@ -95,19 +86,16 @@ def register():
     try:
         db.session.add(new_user)
         db.session.commit()
-
-        # Send verification email
-        send_verification_email(email, token)
-
     except IntegrityError:
         db.session.rollback()
         return jsonify({"message": "Email already registered"}), 409
 
+    try:
+        send_verification_email(email, token)
     except Exception:
-        db.session.rollback()
-        current_app.logger.exception("Registration email could not be sent")
+        current_app.logger.exception("Verification email could not be sent")
         return jsonify({
-            "message": "Registration could not be completed"
+            "message": "Account created, but verification email could not be sent. Please contact support."
         }), 500
 
     return jsonify({
@@ -115,10 +103,9 @@ def register():
     }), 201
 
 
-# Verify student email
+# Verify the user's college email
 @auth_bp.route("/verify/<token>", methods=["GET"])
 def verify_email(token):
-
     token_hash = hashlib.sha256(token.encode()).hexdigest()
 
     user = User.query.filter_by(
@@ -126,21 +113,10 @@ def verify_email(token):
     ).first()
 
     if not user:
-        return jsonify({
-            "message": "Invalid verification link"
-        }), 400
+        return jsonify({"message": "Invalid verification link"}), 400
 
-    if user.is_verified:
-        return jsonify({
-            "message": "Email already verified"
-        }), 200
-
-    expiry = user.verification_token_expires_at
-
-    if not expiry or expiry <= datetime.now(timezone.utc).replace(tzinfo=None):
-        return jsonify({
-            "message": "Verification link expired"
-        }), 400
+    if user.verification_token_expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        return jsonify({"message": "Verification link has expired"}), 400
 
     user.is_verified = True
     user.verification_token_hash = None
@@ -148,6 +124,47 @@ def verify_email(token):
 
     db.session.commit()
 
+    return jsonify({"message": "Email verified successfully"}), 200
+
+
+# Log in an existing user
+@auth_bp.route("/login", methods=["POST"])
+def login():
+    data = request.get_json(silent=True)
+
+    if not data or not data.get("email") or not data.get("password"):
+        return jsonify({"message": "Email and password are required"}), 400
+
+    email = data["email"].strip().lower()
+    password = data["password"]
+
+    user = User.query.filter_by(email=email).first()
+
+    # Use the same message for unknown email and wrong password
+    if not user or not check_password_hash(user.password, password):
+        return jsonify({"message": "Invalid email or password"}), 401
+
+    if not user.is_verified:
+        return jsonify({
+            "message": "Please verify your email before logging in"
+        }), 403
+
+    # Generate a JWT valid for 24 hours
+    token = jwt.encode(
+        {
+            "sub": str(user.id),
+            "exp": datetime.now(timezone.utc) + timedelta(hours=24)
+        },
+        current_app.config["SECRET_KEY"],
+        algorithm="HS256"
+    )
+
     return jsonify({
-        "message": "Email verified successfully"
+        "message": "Login successful",
+        "token": token,
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email
+        }
     }), 200
