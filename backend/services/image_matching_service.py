@@ -11,15 +11,17 @@ _model = None
 _processor = None
 
 
-def load_clip_model():
-    """Load CLIP only when image matching is enabled and requested."""
-    global _model, _processor
-
+def check_image_matching_enabled():
     if os.getenv("DISABLE_IMAGE_MATCHING", "false").lower() == "true":
         raise RuntimeError("Image matching is disabled on this server.")
 
+
+def load_clip_model():
+    global _model, _processor
+
+    check_image_matching_enabled()
+
     if _model is None or _processor is None:
-        import torch
         from transformers import CLIPModel, CLIPProcessor
 
         _processor = CLIPProcessor.from_pretrained(MODEL_NAME)
@@ -30,7 +32,6 @@ def load_clip_model():
 
 
 def download_image(image_url):
-    """Download an item image and convert it to RGB."""
     response = requests.get(image_url, timeout=20)
     response.raise_for_status()
 
@@ -39,13 +40,12 @@ def download_image(image_url):
 
 
 def get_image_embedding(image_url):
-    """Generate an image embedding using CLIP."""
+    model, processor = load_clip_model()
+
     import torch
     import torch.nn.functional as F
 
-    model, processor = load_clip_model()
     image = download_image(image_url)
-
     inputs = processor(images=image, return_tensors="pt")
 
     with torch.inference_mode():
@@ -58,7 +58,8 @@ def get_image_embedding(image_url):
 
 
 def calculate_image_similarity(image_url1, image_url2):
-    """Calculate visual similarity between two item images."""
+    check_image_matching_enabled()
+
     import torch
     import torch.nn.functional as F
 
