@@ -1,1 +1,5 @@
 
+ALTER TABLE claims
+ADD COLUMN proof_type VARCHAR(50) NULL,
+ADD COLUMN proof_details TEXT NULL;
+
