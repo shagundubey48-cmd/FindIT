@@ -1,8 +1,9 @@
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+
 import itemService from "../services/itemService";
+import { useAuth } from "../context/AuthContext";
 
 export default function MyReports() {
   const { user } = useAuth();
@@ -10,8 +11,9 @@ export default function MyReports() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
-  const fetchMyReports = useCallback(async () => {
+  const fetchReports = async () => {
     try {
       setLoading(true);
       setError("");
@@ -19,24 +21,29 @@ export default function MyReports() {
       const data = await itemService.getItems();
 
       const myItems = (data.items || []).filter(
-        (item) => Number(item.user_id) === Number(user?.id)
+        (item) => String(item.user_id) === String(user?.id)
       );
 
       setItems(myItems);
     } catch (err) {
       setError(
-        err.response?.data?.message || "Unable to load your reports."
+        err.response?.data?.message ||
+        "Unable to load your reports."
       );
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  };
 
   useEffect(() => {
-    fetchMyReports();
-  }, [fetchMyReports]);
+    if (user?.id) {
+      fetchReports();
+    } else {
+      setLoading(false);
+    }
+  }, [user?.id]);
 
-  async function handleWithdraw(itemId) {
+  const handleWithdraw = async (itemId) => {
     const confirmed = window.confirm(
       "Are you sure you want to withdraw this report?"
     );
@@ -45,93 +52,154 @@ export default function MyReports() {
 
     try {
       await itemService.withdrawItem(itemId);
-      setItems((previous) =>
-        previous.filter((item) => item.id !== itemId)
-      );
+
+      setMessage("Report withdrawn successfully.");
+
+      fetchReports();
     } catch (err) {
-      alert(
-        err.response?.data?.message || "Unable to withdraw this report."
+      setError(
+        err.response?.data?.message ||
+        "Unable to withdraw report."
       );
     }
-  }
-
-  if (loading) {
-    return <p className="py-16 text-center">Loading your reports...</p>;
-  }
+  };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
-      <h1 className="mb-2 text-3xl font-bold text-gray-900">
-        My Reports
-      </h1>
+    <div className="min-h-screen bg-background py-10 px-5">
 
-      <p className="mb-8 text-gray-600">
-        Manage your active lost and found reports.
-      </p>
+      <div className="max-w-6xl mx-auto">
 
-      {error && <p className="mb-4 text-red-600">{error}</p>}
+        <div className="flex justify-between items-center flex-wrap gap-4 mb-8">
 
-      {items.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-10 text-center">
-          <p className="text-gray-600">You have no active reports.</p>
-          <div className="mt-5 flex justify-center gap-3">
+          <div>
+            <h1 className="text-3xl font-bold">
+              My Reports
+            </h1>
+
+            <p className="text-gray-500 mt-2">
+              Manage your lost and found reports.
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+
             <Link
               to="/report-lost"
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+              className="bg-primary text-white px-4 py-3 rounded-lg"
             >
-              Report Lost Item
+              Report Lost
             </Link>
+
             <Link
               to="/report-found"
-              className="rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+              className="bg-green-600 text-white px-4 py-3 rounded-lg"
             >
-              Report Found Item
+              Report Found
             </Link>
+
           </div>
+
         </div>
-      ) : (
-        <div className="space-y-4">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex flex-col justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 sm:flex-row sm:items-center"
-            >
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold">{item.title}</h2>
-                  <span className="rounded-full bg-gray-100 px-2 py-1 text-xs capitalize">
-                    {item.item_type}
-                  </span>
-                </div>
 
-                <p className="mt-1 text-sm text-gray-500">
-                  {item.category} · {item.campus} · {item.item_date}
-                </p>
+        {message && (
+          <p className="bg-green-50 text-green-700 p-3 rounded-lg mb-5">
+            {message}
+          </p>
+        )}
 
-                <p className="mt-1 text-sm text-gray-500">
-                  Status: {item.status}
-                </p>
-              </div>
+        {error && (
+          <p className="bg-red-50 text-red-600 p-3 rounded-lg mb-5">
+            {error}
+          </p>
+        )}
 
-              <div className="flex gap-3">
-                <Link
-                  to={`/items/${item.id}`}
-                  className="rounded-lg border border-indigo-600 px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50"
-                >
-                  View
-                </Link>
+        {loading ? (
+          <p className="text-center py-16">
+            Loading your reports...
+          </p>
+        ) : items.length === 0 ? (
+          <div className="bg-white rounded-2xl p-12 text-center">
 
-                <button
-                  onClick={() => handleWithdraw(item.id)}
-                  className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-                >
-                  Withdraw
-                </button>
-              </div>
+            <h2 className="text-xl font-bold">
+              No Reports Yet
+            </h2>
+
+            <p className="text-gray-500 mt-2">
+              Your reported items will appear here.
+            </p>
+
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
+
+            <div className="overflow-x-auto">
+
+              <table className="w-full text-left">
+
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-4">Item</th>
+                    <th className="p-4">Type</th>
+                    <th className="p-4">Date</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4">Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {items.map((item) => (
+                    <tr key={item.id} className="border-t">
+
+                      <td className="p-4 font-medium">
+                        {item.title}
+                      </td>
+
+                      <td className="p-4 capitalize">
+                        {item.item_type}
+                      </td>
+
+                      <td className="p-4">
+                        {item.item_date}
+                      </td>
+
+                      <td className="p-4">
+                        <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs">
+                          {item.status}
+                        </span>
+                      </td>
+
+                      <td className="p-4">
+                        <div className="flex gap-3">
+
+                          <Link
+                            to={`/items/${item.id}`}
+                            className="text-primary font-medium"
+                          >
+                            View
+                          </Link>
+
+                          <button
+                            onClick={() => handleWithdraw(item.id)}
+                            className="text-red-500 font-medium"
+                          >
+                            Withdraw
+                          </button>
+
+                        </div>
+                      </td>
+
+                    </tr>
+                  ))}
+                </tbody>
+
+              </table>
+
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }
+
