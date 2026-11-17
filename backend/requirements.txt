@@ -11,3 +11,4 @@ requests
 Pillow
 torch
 transformers
+qrcode[pil]
