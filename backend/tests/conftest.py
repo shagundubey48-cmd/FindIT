@@ -16,6 +16,7 @@ from models.user import User
 def app():
     # Create Flask app using MySQL test database
     app = create_app(TestConfig)
+    app.config["ALLOWED_EMAIL_DOMAINS"] = ["mail.jiit.ac.in"]
 
     with app.app_context():
         db.create_all()
