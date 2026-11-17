@@ -1,7 +1,6 @@
 
 from flask import Blueprint, request, jsonify, g, current_app
 from datetime import date
-
 from sqlalchemy import or_
 
 from app import db
@@ -162,7 +161,6 @@ def upload_image(item_id):
 def get_items():
     query = Item.query.filter_by(status="active")
 
-    # Filter by lost or found type
     item_type = request.args.get("type", "").strip().lower()
 
     if item_type:
@@ -173,7 +171,6 @@ def get_items():
 
         query = query.filter_by(item_type=item_type)
 
-    # Search in item title and description
     keyword = request.args.get("q", "").strip()
 
     if keyword:
@@ -185,13 +182,11 @@ def get_items():
             )
         )
 
-    # Filter by category
     category = request.args.get("category", "").strip()
 
     if category:
         query = query.filter(Item.category.ilike(category))
 
-    # Filter by campus
     campus = request.args.get("campus", "").strip()
 
     if campus:
@@ -222,4 +217,83 @@ def get_item_details(item_id):
 
     return jsonify({
         "item": serialize_item(item)
+    }), 200
+
+
+# Update details of an item owned by the logged-in user
+@items_bp.route("/items/<int:item_id>", methods=["PUT"])
+@token_required
+def update_item(item_id):
+    item = Item.query.filter_by(
+        id=item_id,
+        user_id=g.current_user.id,
+        status="active"
+    ).first()
+
+    if not item:
+        return jsonify({"message": "Item not found"}), 404
+
+    data = request.get_json(silent=True)
+
+    if not data:
+        return jsonify({"message": "Request data is required"}), 400
+
+    editable_fields = [
+        "title", "description", "category",
+        "campus", "location", "item_date"
+    ]
+
+    if not any(field in data for field in editable_fields):
+        return jsonify({"message": "No editable fields provided"}), 400
+
+    text_fields = [
+        "title", "description", "category",
+        "campus", "location"
+    ]
+
+    for field in text_fields:
+        if field in data:
+            if not isinstance(data[field], str) or not data[field].strip():
+                return jsonify({"message": f"{field} cannot be empty"}), 400
+
+    for field in text_fields:
+        if field in data:
+            setattr(item, field, data[field].strip())
+
+    if "item_date" in data:
+        try:
+            item.item_date = date.fromisoformat(data["item_date"])
+        except (ValueError, TypeError):
+            return jsonify({
+                "message": "Invalid date format. Use YYYY-MM-DD"
+            }), 400
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Item updated successfully",
+        "item": serialize_item(item)
+    }), 200
+
+
+# Withdraw an item report owned by the logged-in user
+@items_bp.route("/items/<int:item_id>/withdraw", methods=["PATCH"])
+@token_required
+def withdraw_item(item_id):
+    item = Item.query.filter_by(
+        id=item_id,
+        user_id=g.current_user.id,
+        status="active"
+    ).first()
+
+    if not item:
+        return jsonify({"message": "Item not found"}), 404
+
+    item.status = "withdrawn"
+    db.session.commit()
+
+    return jsonify({
+        "message": "Item report withdrawn successfully",
+        "item_id": item.id,
+        "status": item.status
     }), 200
