@@ -1,4 +1,11 @@
 
+import { Link, Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
+
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import VerifyEmail from "./pages/VerifyEmail";
+
 import LostItems from "./pages/LostItems";
 import FoundItems from "./pages/FoundItems";
 import ReportLost from "./pages/ReportLost";
@@ -6,242 +13,187 @@ import ReportFound from "./pages/ReportFound";
 import ItemDetails from "./pages/ItemDetails";
 import MyReports from "./pages/MyReports";
 
-import { Routes, Route, Navigate, Link, Outlet } from "react-router-dom";
+function ProtectedRoute() {
+  const { user, loading } = useAuth();
 
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import VerifyEmail from "./pages/VerifyEmail";
+  if (loading) {
+    return <p className="py-16 text-center">Loading...</p>;
+  }
 
-import ProtectedRoute from "./components/ProtectedRoute";
-import { useAuth } from "./context/AuthContext";
+  return user ? <Outlet /> : <Navigate to="/login" replace />;
+}
 
-function Home() {
-  const { isAuthenticated, logout } = useAuth();
+function GuestRoute() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <p className="py-16 text-center">Loading...</p>;
+  }
+
+  return user ? <Navigate to="/" replace /> : <Outlet />;
+}
+
+function Navbar() {
+  const { user, logout } = useAuth();
 
   return (
-    <div className="min-h-screen bg-background">
-
-      <nav className="flex items-center justify-between px-6 md:px-12 py-5 bg-white shadow-sm">
-
-        <Link to="/" className="text-2xl font-bold text-primary">
-          FindIT.
+    <nav className="border-b border-gray-200 bg-white">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4">
+        <Link to="/" className="text-2xl font-bold text-indigo-600">
+          FindIT
         </Link>
 
-        <div className="flex gap-5 items-center">
+        <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
+          <Link to="/lost-items" className="text-gray-700 hover:text-indigo-600">
+            Lost Items
+          </Link>
 
-          <a href="#about" className="hover:text-primary hidden sm:block">
-            About
-          </a>
+          <Link to="/found-items" className="text-gray-700 hover:text-indigo-600">
+            Found Items
+          </Link>
 
-          {isAuthenticated ? (
+          {user ? (
             <>
-              <Link to="/dashboard" className="text-primary font-semibold">
-                Dashboard
+              <Link to="/report-lost" className="text-gray-700 hover:text-indigo-600">
+                Report Lost
+              </Link>
+
+              <Link to="/report-found" className="text-gray-700 hover:text-indigo-600">
+                Report Found
+              </Link>
+
+              <Link to="/my-reports" className="text-gray-700 hover:text-indigo-600">
+                My Reports
               </Link>
 
               <button
                 onClick={logout}
-                className="bg-red-500 text-white px-5 py-2 rounded-lg"
+                className="rounded-lg bg-gray-100 px-4 py-2 text-gray-700 hover:bg-gray-200"
               >
                 Logout
               </button>
             </>
           ) : (
             <>
-              <Link to="/login" className="hover:text-primary">
+              <Link to="/login" className="text-gray-700 hover:text-indigo-600">
                 Login
               </Link>
 
               <Link
                 to="/register"
-                className="bg-primary text-white px-5 py-2 rounded-lg"
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
               >
-                Get Started
+                Register
               </Link>
             </>
           )}
-
         </div>
-      </nav>
+      </div>
+    </nav>
+  );
+}
 
-      <section className="max-w-6xl mx-auto px-6 py-24 text-center">
-
-        <p className="text-primary font-semibold mb-4">
-          AI POWERED CAMPUS LOST & FOUND
-        </p>
-
-        <h1 className="text-4xl md:text-6xl font-bold text-dark leading-tight">
+function Home() {
+  return (
+    <div className="bg-gray-50">
+      <section className="mx-auto max-w-7xl px-4 py-24 text-center">
+        <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
           Lost Something?
-          <br />
-          <span className="text-primary">
-            Let's Find It Together.
-          </span>
+          <span className="block text-indigo-600">Find It with FindIT.</span>
         </h1>
 
-        <p className="text-gray-500 mt-6 max-w-2xl mx-auto">
-          FindIT helps students report lost and found belongings
-          and intelligently match items using AI.
+        <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">
+          A campus lost and found platform that helps students report,
+          discover and recover misplaced belongings.
         </p>
 
-        <div className="flex flex-wrap justify-center gap-4 mt-8">
-
+        <div className="mt-10 flex flex-wrap justify-center gap-4">
           <Link
-            to={isAuthenticated ? "/dashboard" : "/login"}
-            className="bg-primary text-white px-7 py-3 rounded-xl"
+            to="/lost-items"
+            className="rounded-lg bg-indigo-600 px-6 py-3 font-semibold text-white hover:bg-indigo-700"
           >
-            Report Lost Item
+            Browse Lost Items
           </Link>
 
           <Link
             to="/found-items"
-            className="border border-primary text-primary px-7 py-3 rounded-xl"
+            className="rounded-lg border border-indigo-600 px-6 py-3 font-semibold text-indigo-600 hover:bg-indigo-50"
           >
-            Explore Found Items
-          </Link>
-
-        </div>
-      </section>
-
-      <section id="about" className="bg-white py-16 px-6">
-
-        <h2 className="text-3xl font-bold text-center mb-10">
-          How FindIT Works
-        </h2>
-
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-
-          {[
-            ["01", "Report an Item", "Report your lost or found belongings."],
-            ["02", "AI Matching", "Find similar items through intelligent matching."],
-            ["03", "Get It Back", "Verify ownership and arrange a handover."]
-          ].map(([number, title, description]) => (
-            <div key={number} className="p-8 rounded-2xl bg-background">
-              <span className="text-primary text-3xl font-bold">
-                {number}
-              </span>
-
-              <h3 className="text-xl font-bold mt-4">
-                {title}
-              </h3>
-
-              <p className="text-gray-500 mt-2">
-                {description}
-              </p>
-            </div>
-          ))}
-
-        </div>
-      </section>
-
-      <footer className="text-center py-8 text-gray-500">
-        © 2026 FindIT. Campus Lost & Found Platform.
-      </footer>
-
-    </div>
-  );
-}
-
-function Dashboard() {
-  const { user } = useAuth();
-
-  return (
-    <div className="min-h-screen p-8 bg-background">
-
-      <h1 className="text-3xl font-bold">
-        Welcome, {user?.name || "Student"}!
-      </h1>
-
-      <p className="text-gray-500 mt-3">
-        Your FindIT dashboard is ready.
-      </p>
-
-      <div className="grid md:grid-cols-2 gap-5 mt-10">
-
-        <Link
-          to="/report-lost"
-          className="bg-white p-7 rounded-xl shadow-sm hover:shadow-md"
-        >
-          <h2 className="text-xl font-bold text-primary">
-            Report Lost Item
-          </h2>
-          <p className="text-gray-500 mt-2">
-            Report something you have lost.
-          </p>
-        </Link>
-
-        <Link
-          to="/found-items"
-          className="bg-white p-7 rounded-xl shadow-sm hover:shadow-md"
-        >
-          <h2 className="text-xl font-bold text-primary">
             Browse Found Items
-          </h2>
-          <p className="text-gray-500 mt-2">
-            Search for your missing belongings.
+          </Link>
+        </div>
+      </section>
+
+      <section className="mx-auto grid max-w-7xl gap-6 px-4 pb-20 md:grid-cols-3">
+        <div className="rounded-xl bg-white p-7 shadow-sm">
+          <h2 className="text-xl font-semibold">Report Lost Items</h2>
+          <p className="mt-3 text-gray-600">
+            Add details about belongings you have misplaced on campus.
           </p>
-        </Link>
+        </div>
 
-      </div>
+        <div className="rounded-xl bg-white p-7 shadow-sm">
+          <h2 className="text-xl font-semibold">Report Found Items</h2>
+          <p className="mt-3 text-gray-600">
+            Help fellow students by reporting items you have found.
+          </p>
+        </div>
 
+        <div className="rounded-xl bg-white p-7 shadow-sm">
+          <h2 className="text-xl font-semibold">Find Possible Matches</h2>
+          <p className="mt-3 text-gray-600">
+            Explore item reports and check possible text-based matches.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }
 
-function Placeholder({ title }) {
+function Footer() {
   return (
-    <div className="min-h-screen flex flex-col gap-4 items-center justify-center">
-      <h1 className="text-3xl font-bold">{title}</h1>
-      <Link to="/" className="text-primary">
-        Back to Home
-      </Link>
-    </div>
+    <footer className="border-t border-gray-200 bg-white py-6 text-center text-sm text-gray-500">
+      © {new Date().getFullYear()} FindIT — Campus Lost and Found
+    </footer>
   );
 }
 
-function GuestRoute() {
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return <div className="p-10 text-center">Loading...</div>;
-  }
-
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Outlet />;
+function AppLayout() {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Navbar />
+      <main className="flex-1">
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
+  );
 }
 
 export default function App() {
   return (
     <Routes>
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<Home />} />
 
-      <Route path="/" element={<Home />} />
+        <Route element={<GuestRoute />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Route>
 
-      <Route element={<GuestRoute />}>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route path="/lost-items" element={<LostItems />} />
+          <Route path="/found-items" element={<FoundItems />} />
+          <Route path="/items/:id" element={<ItemDetails />} />
+          <Route path="/report-lost" element={<ReportLost />} />
+          <Route path="/report-found" element={<ReportFound />} />
+          <Route path="/my-reports" element={<MyReports />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
-
-      <Route path="/verify-email" element={<VerifyEmail />} />
-
-      <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/report-lost" element={<Placeholder title="Report Lost Item" />} />
-        
-      </Route>
-
-      <Route path="/found-items" element={<Placeholder title="Found Items" />} />
-
-      <Route path="*" element={<Placeholder title="404 - Page Not Found" />} />
-
-<Route path="/lost-items" element={<LostItems />} />
-
-<Route path="/found-items" element={<FoundItems />} />
-
-<Route element={<ProtectedRoute />}>
-  <Route path="/report-lost" element={<ReportLost />} />
-  <Route path="/report-found" element={<ReportFound />} />
-  <Route path="/my-reports" element={<MyReports />} />
-  <Route path="/items/:id" element={<ItemDetails />} />
-</Route>
-
     </Routes>
   );
 }
