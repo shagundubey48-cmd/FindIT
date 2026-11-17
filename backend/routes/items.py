@@ -7,6 +7,7 @@ from app import db
 from models.item import Item
 from utils.auth_middleware import token_required
 from services.cloudinary_service import upload_item_image
+from services.matching_service import find_text_matches
 
 
 items_bp = Blueprint("items", __name__)
@@ -155,7 +156,7 @@ def upload_image(item_id):
     }), 200
 
 
-# View and search active lost and found items
+# View, search and filter active lost and found items
 @items_bp.route("/items", methods=["GET"])
 @token_required
 def get_items():
@@ -215,9 +216,7 @@ def get_item_details(item_id):
     if not item:
         return jsonify({"message": "Item not found"}), 404
 
-    return jsonify({
-        "item": serialize_item(item)
-    }), 200
+    return jsonify({"item": serialize_item(item)}), 200
 
 
 # Update details of an item owned by the logged-in user
@@ -254,7 +253,9 @@ def update_item(item_id):
     for field in text_fields:
         if field in data:
             if not isinstance(data[field], str) or not data[field].strip():
-                return jsonify({"message": f"{field} cannot be empty"}), 400
+                return jsonify({
+                    "message": f"{field} cannot be empty"
+                }), 400
 
     for field in text_fields:
         if field in data:
@@ -276,7 +277,7 @@ def update_item(item_id):
     }), 200
 
 
-# Withdraw an item report owned by the logged-in user
+# Withdraw an item report
 @items_bp.route("/items/<int:item_id>/withdraw", methods=["PATCH"])
 @token_required
 def withdraw_item(item_id):
@@ -296,4 +297,31 @@ def withdraw_item(item_id):
         "message": "Item report withdrawn successfully",
         "item_id": item.id,
         "status": item.status
+    }), 200
+
+
+# Find text-based matches for a lost or found item
+@items_bp.route("/items/<int:item_id>/matches", methods=["GET"])
+@token_required
+def get_item_matches(item_id):
+    item = Item.query.filter_by(
+        id=item_id,
+        status="active"
+    ).first()
+
+    if not item:
+        return jsonify({"message": "Item not found"}), 404
+
+    matches = find_text_matches(item)
+
+    return jsonify({
+        "item_id": item.id,
+        "count": len(matches),
+        "matches": [
+            {
+                "score": match["score"],
+                "item": serialize_item(match["item"])
+            }
+            for match in matches
+        ]
     }), 200
