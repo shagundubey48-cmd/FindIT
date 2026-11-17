@@ -212,7 +212,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
       </Route>
 
-      <Route path="/verify/:token" element={<VerifyEmail />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
