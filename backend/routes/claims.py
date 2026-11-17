@@ -1,9 +1,10 @@
-
 from flask import Blueprint, jsonify, request, g
 
 from app import db
 from models.item import Item
 from models.claim import Claim
+from models.item_secret import ItemSecret
+from routes.secret_question import has_verified_secret
 from utils.auth_middleware import token_required
 
 
@@ -61,6 +62,15 @@ def submit_claim(item_id):
     if item.user_id == g.current_user.id:
         return jsonify({
             "message": "You cannot claim an item reported by yourself"
+        }), 403
+
+    # US-16: the finder's secret question must be answered first.
+    if (
+        ItemSecret.query.filter_by(item_id=item_id).first()
+        and not has_verified_secret(item_id, g.current_user.id)
+    ):
+        return jsonify({
+            "message": "Answer the item's secret question before claiming"
         }), 403
 
     data = request.get_json(silent=True) or {}
