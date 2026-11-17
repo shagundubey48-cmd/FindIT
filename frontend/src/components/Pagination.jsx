@@ -1,1 +1,2 @@
 
+export default function Pagination({page=1,totalPages=1,onChange}){return <div className="mt-6 flex items-center justify-center gap-3"><button disabled={page<=1} onClick={()=>onChange(page-1)} className="rounded-lg border px-3 py-2 disabled:opacity-40">Previous</button><span className="text-sm text-slate-500">Page {page} of {totalPages}</span><button disabled={page>=totalPages} onClick={()=>onChange(page+1)} className="rounded-lg border px-3 py-2 disabled:opacity-40">Next</button></div>}
