@@ -1,9 +1,12 @@
-
 from flask import Blueprint, jsonify
 
 from models.item import Item
 from utils.auth_middleware import token_required
-from services.matching_service import calculate_match_score
+from app import db
+from services.matching_service import (
+    calculate_match_score,
+    calculate_similarity
+)
 from services.image_matching_service import calculate_image_similarity
 from services.notification_service import create_match_notifications
 
@@ -19,7 +22,7 @@ combined_matching_bp = Blueprint("combined_matching", __name__)
 def get_matched_items(item_id):
     """Return ranked text and image matches and notify both item owners."""
 
-    item = Item.query.get(item_id)
+    item = db.session.get(Item, item_id)
 
     if not item:
         return jsonify({"message": "Item not found"}), 404
@@ -38,6 +41,18 @@ def get_matched_items(item_id):
     for candidate in candidates:
         text_score = calculate_match_score(item, candidate)
         image_score = None
+
+        # Category and campus alone are worth 20 points, so a text match
+        # must also share some title or description wording.
+        has_text_overlap = (
+            calculate_similarity(item.title, candidate.title) > 0
+            or calculate_similarity(
+                item.description, candidate.description
+            ) > 0
+        )
+
+        if not has_text_overlap:
+            text_score = 0
 
         if item.image_url and candidate.image_url:
             try:
