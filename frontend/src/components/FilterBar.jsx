@@ -1,3 +1,4 @@
+import { CATEGORIES, CAMPUSES } from "../utils/constants";
 
 export default function FilterBar({
   category,
@@ -14,13 +15,9 @@ export default function FilterBar({
         className="rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none focus:border-indigo-500"
       >
         <option value="">All Categories</option>
-        <option value="Electronics">Electronics</option>
-        <option value="Accessories">Accessories</option>
-        <option value="Bags">Bags</option>
-        <option value="Clothing">Clothing</option>
-        <option value="Stationery">Stationery</option>
-        <option value="Documents">Documents</option>
-        <option value="Other">Other</option>
+        {CATEGORIES.map((name) => (
+          <option key={name} value={name}>{name}</option>
+        ))}
       </select>
 
       <select
@@ -29,8 +26,9 @@ export default function FilterBar({
         className="rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none focus:border-indigo-500"
       >
         <option value="">All Campuses</option>
-        <option value="JIIT Sector 62">JIIT Sector 62</option>
-        <option value="JIIT Sector 128">JIIT Sector 128</option>
+        {CAMPUSES.map((name) => (
+          <option key={name} value={name}>{name}</option>
+        ))}
       </select>
 
       <button
