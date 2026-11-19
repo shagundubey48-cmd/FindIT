@@ -1,12 +1,110 @@
-import { useEffect,useState } from "react";
-import api from "../../services/api";
+import { useEffect, useState } from "react";
+import { getAdminStatistics } from "../../services/adminService";
 import Loader from "../../components/Loader";
-import {getErrorMessage,titleCase,formatDate} from "../../utils/helpers";
-export default function AdminStatistics(){const [data,setData]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[remarks,setRemarks]=useState({});
-const load=async()=>{try{const r=await api.get("/admin/statistics");setData(r.data);}catch(e){setError(getErrorMessage(e));}finally{setLoading(false);}};useEffect(()=>{load();},[]);
-const decide=async(id,status)=>{try{await api.patch(`/admin/claims/${id}/decision`,{status,admin_remarks:remarks[id]||"Reviewed by administrator"});await load();}catch(e){setError(getErrorMessage(e));}};
-const moderate=async(id,status)=>{try{await api.patch(`/admin/items/${id}/moderation`,{status,admin_remarks:remarks[id]||"Reviewed by administrator"});await load();}catch(e){setError(getErrorMessage(e));}};
-if(loading)return <Loader/>;const rows=data?.statistics||data?.items||data?.claims||[];
-return <main className="mx-auto max-w-6xl px-5 py-10"><h1 className="mb-6 text-3xl font-bold">Statistics</h1>{error&&<p className="mb-4 rounded bg-red-50 p-3 text-red-700">{error}</p>}{data&&!Array.isArray(data)&&!rows.length&&<div className="grid gap-4 sm:grid-cols-3">{Object.entries(data).map(([k,v])=><div className="rounded-2xl border bg-white p-5" key={k}><p className="text-sm text-slate-500">{titleCase(k)}</p><p className="mt-2 text-3xl font-bold">{String(v)}</p></div>)}</div>}
-<div className="space-y-4">{rows.map(r=><article key={r.id} className="rounded-2xl border bg-white p-5"><div className="flex flex-wrap justify-between gap-3"><div><h2 className="font-bold">{r.title||r.item_title||`#${r.id}`}</h2><p className="text-sm text-slate-500">{r.claimant_name||r.item_type||r.email||""}</p><p className="mt-1 text-xs text-slate-400">{formatDate(r.created_at)}</p></div><span className="h-fit rounded-full bg-indigo-50 px-3 py-1 text-xs text-indigo-700">{titleCase(r.status)}</span></div>{r.ownership_details&&<p className="mt-3 text-sm">{r.ownership_details}</p>}<textarea value={remarks[r.id]||""} onChange={e=>setRemarks({...remarks,[r.id]:e.target.value})} placeholder="Administrator remarks" className="mt-3 w-full rounded-lg border p-3"/><div className="mt-3 flex flex-wrap gap-2">{r.status==="pending"&&<><button onClick={()=>decide(r.id,"approved")} className="rounded-lg bg-green-600 px-4 py-2 text-white">Approve claim</button><button onClick={()=>decide(r.id,"rejected")} className="rounded-lg bg-red-600 px-4 py-2 text-white">Reject claim</button></>}{r.item_type&&<><button onClick={()=>moderate(r.id,"active")} className="rounded-lg border px-3 py-2">Set active</button><button onClick={()=>moderate(r.id,"resolved")} className="rounded-lg border px-3 py-2">Resolve</button><button onClick={()=>moderate(r.id,"removed")} className="rounded-lg border px-3 py-2">Remove</button></>}</div></article>)}</div></main>}
+import { getErrorMessage } from "../../utils/helpers";
 
+function Stat({ label, value }) {
+  return (
+    <div className="rounded-2xl border bg-white p-5">
+      <p className="text-sm text-slate-500">{label}</p>
+      <p className="mt-2 text-3xl font-bold">{value ?? "—"}</p>
+    </div>
+  );
+}
+
+export default function AdminStatistics() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    getAdminStatistics()
+      .then((res) => setData(res.data))
+      .catch((err) => setError(getErrorMessage(err)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <Loader />;
+
+  return (
+    <main className="mx-auto max-w-6xl px-5 py-10">
+      <h1 className="mb-6 text-3xl font-bold">Statistics</h1>
+      {error && <p className="mb-4 rounded bg-red-50 p-3 text-red-700">{error}</p>}
+
+      {data && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat label="Lost reports" value={data.total_lost_reports} />
+            <Stat label="Found reports" value={data.total_found_reports} />
+            <Stat label="Items recovered" value={data.items_recovered} />
+            <Stat label="Recovery rate" value={`${data.recovery_rate}%`} />
+            <Stat label="Active items" value={data.active_items} />
+            <Stat
+              label="Avg. recovery time"
+              value={data.average_recovery_days != null ? `${data.average_recovery_days} days` : null}
+            />
+            <Stat label="Claims approval rate" value={`${data.claims?.approval_rate ?? 0}%`} />
+            <Stat
+              label="Avg. feedback rating"
+              value={data.feedback?.average_rating != null ? `${data.feedback.average_rating} / 5` : null}
+            />
+          </div>
+
+          <h2 className="mb-3 mt-10 text-xl font-bold">Claims</h2>
+          <div className="grid gap-4 sm:grid-cols-4">
+            <Stat label="Total" value={data.claims?.total} />
+            <Stat label="Pending" value={data.claims?.pending} />
+            <Stat label="Approved" value={data.claims?.approved} />
+            <Stat label="Rejected" value={data.claims?.rejected} />
+          </div>
+
+          <h2 className="mb-3 mt-10 text-xl font-bold">By category</h2>
+          <div className="overflow-x-auto rounded-2xl border bg-white">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="p-3">Category</th>
+                  <th className="p-3">Found</th>
+                  <th className="p-3">Recovered</th>
+                  <th className="p-3">Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data.by_category || []).map((row) => (
+                  <tr key={row.category} className="border-t">
+                    <td className="p-3">{row.category}</td>
+                    <td className="p-3">{row.found}</td>
+                    <td className="p-3">{row.recovered}</td>
+                    <td className="p-3">{row.recovery_rate}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <h2 className="mb-3 mt-10 text-xl font-bold">Monthly trend</h2>
+          <div className="overflow-x-auto rounded-2xl border bg-white">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="p-3">Month</th>
+                  <th className="p-3">Reports</th>
+                  <th className="p-3">Recoveries</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data.monthly_trend || []).map((row) => (
+                  <tr key={row.month} className="border-t">
+                    <td className="p-3">{row.month}</td>
+                    <td className="p-3">{row.reports}</td>
+                    <td className="p-3">{row.recoveries}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </main>
+  );
+}
