@@ -1,5 +1,5 @@
-
 from flask import Blueprint, jsonify
+from app import db
 from models.item import Item
 from utils.auth_middleware import token_required
 from services.image_matching_service import calculate_image_similarity
@@ -16,7 +16,7 @@ image_matching_bp = Blueprint("image_matching", __name__)
 def get_image_matches(item_id):
     """Find visually similar images from opposite-type item reports."""
 
-    item = Item.query.get(item_id)
+    item = db.session.get(Item, item_id)
 
     if not item:
         return jsonify({"message": "Item not found"}), 404
@@ -76,4 +76,3 @@ def get_image_matches(item_id):
         "count": len(matches),
         "matches": matches
     }), 200
-
