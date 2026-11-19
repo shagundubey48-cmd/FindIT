@@ -1,7 +1,7 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import itemService from "../services/itemService";
+import { CATEGORIES, CAMPUSES } from "../utils/constants";
 
 const initialForm = {
   title: "",
@@ -45,6 +45,7 @@ export default function ReportFound() {
 
     setError("");
     setImage(file);
+    if (preview) URL.revokeObjectURL(preview);
     setPreview(URL.createObjectURL(file));
   };
 
@@ -55,11 +56,18 @@ export default function ReportFound() {
     setError("");
 
     try {
-      const response = await itemService.reportFound(form);
+      const response = await itemService.reportFoundItem(form);
       const item = response.item;
 
+      // Keep the saved report even if only the image upload fails.
       if (image && item?.id) {
-        await itemService.uploadImage(item.id, image);
+        try {
+          await itemService.uploadImage(item.id, image);
+        } catch {
+          window.alert(
+            "Your report was saved, but the image could not be uploaded."
+          );
+        }
       }
 
       navigate(`/items/${item.id}`);
@@ -139,13 +147,9 @@ export default function ReportFound() {
               required
             >
               <option value="">Select category</option>
-              <option>Electronics</option>
-              <option>Accessories</option>
-              <option>Bags</option>
-              <option>Stationery</option>
-              <option>Clothing</option>
-              <option>Documents</option>
-              <option>Other</option>
+              {CATEGORIES.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
             </select>
           </div>
 
@@ -162,8 +166,9 @@ export default function ReportFound() {
               required
             >
               <option value="">Select campus</option>
-              <option>JIIT Sector 62</option>
-              <option>JIIT Sector 128</option>
+              {CAMPUSES.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
             </select>
           </div>
 
@@ -233,4 +238,3 @@ export default function ReportFound() {
     </div>
   );
 }
-
