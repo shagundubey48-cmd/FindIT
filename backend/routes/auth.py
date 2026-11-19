@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify, current_app, g
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError
@@ -164,7 +163,8 @@ def login():
         "user": {
             "id": user.id,
             "name": user.name,
-            "email": user.email
+            "email": user.email,
+            "is_admin": user.is_admin
         }
     }), 200
 
@@ -180,6 +180,7 @@ def get_profile():
         "name": user.name,
         "email": user.email,
         "is_verified": user.is_verified,
+        "is_admin": user.is_admin,
         "created_at": (
             user.created_at.isoformat() if user.created_at else None
         )
@@ -212,6 +213,8 @@ def update_profile():
         "user": {
             "id": user.id,
             "name": user.name,
-            "email": user.email
+            "email": user.email,
+            "is_verified": user.is_verified,
+            "is_admin": user.is_admin
         }
     }), 200
