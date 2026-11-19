@@ -1,99 +1,46 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { getNotifications, markNotificationRead } from "../services/notificationService";
 
-import authService from "../services/authService";
+export const NotificationContext = createContext(null);
 
-export const AuthContext = createContext(null);
+export function NotificationProvider({ children }) {
+  const [notifications, setNotifications] = useState([]);
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  // Check existing login session
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const data = await authService.getProfile();
-
-        setUser(data.user || data);
-      } catch (error) {
-        authService.logout();
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
+  const refresh = useCallback(async () => {
+    try {
+      const response = await getNotifications();
+      const data = response.data;
+      setNotifications(Array.isArray(data) ? data : data.notifications || []);
+    } catch (error) {
+      // Keep the app usable if notifications cannot be loaded.
+      setNotifications([]);
+    }
   }, []);
 
-  // Login
-  const login = async (credentials) => {
-    const data = await authService.login(credentials);
-
-    if (data.token || data.access_token) {
-      const profile = await authService.getProfile();
-      setUser(profile.user || profile);
+  useEffect(() => {
+    if (localStorage.getItem("token")) {
+      refresh();
     }
+  }, [refresh]);
 
-    return data;
+  const markRead = async (id) => {
+    await markNotificationRead(id);
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === id ? { ...notification, is_read: true } : notification
+      )
+    );
   };
 
-  // Register
-  const register = async (userData) => {
-    return await authService.register(userData);
-  };
-
-  // Logout
-  const logout = () => {
-    authService.logout();
-    setUser(null);
-  };
-
-  // Update profile (merge so fields like is_admin are not lost)
-  const updateProfile = async (userData) => {
-    const data = await authService.updateProfile(userData);
-    setUser((previous) => ({ ...previous, ...(data.user || data) }));
-    return data;
-  };
-
-  const value = {
-    user,
-    loading,
-    isAuthenticated: Boolean(user),
-    login,
-    register,
-    logout,
-    updateProfile,
-  };
+  const unreadCount = notifications.filter((notification) => !notification.is_read).length;
 
   return (
-    <AuthContext.Provider value={value}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, refresh, markRead }}>
       {children}
-    </AuthContext.Provider>
+    </NotificationContext.Provider>
   );
 }
 
-// Custom authentication hook
-export function useAuth() {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error(
-      "useAuth must be used inside AuthProvider"
-    );
-  }
-
-  return context;
+export function useNotificationContext() {
+  return useContext(NotificationContext);
 }
