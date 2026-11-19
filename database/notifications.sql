@@ -1,3 +1,4 @@
+USE finditplus;
 
 CREATE TABLE IF NOT EXISTS notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -20,4 +21,3 @@ CREATE TABLE IF NOT EXISTS notifications (
     CONSTRAINT unique_user_item_match_notification
         UNIQUE (user_id, item_id, matched_item_id)
 );
-
