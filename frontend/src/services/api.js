@@ -1,4 +1,3 @@
-
 import axios from "axios";
 
 const api = axios.create({
@@ -23,12 +22,23 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handle unauthorized responses
+// Handle expired / invalid sessions
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const url = error.config?.url || "";
+    const isAuthAttempt = url.includes("/login") || url.includes("/register");
+
+    if (
+      error.response?.status === 401 &&
+      !isAuthAttempt &&
+      localStorage.getItem("token")
+    ) {
       localStorage.removeItem("token");
+
+      if (window.location.pathname !== "/login") {
+        window.location.assign("/login");
+      }
     }
 
     return Promise.reject(error);
