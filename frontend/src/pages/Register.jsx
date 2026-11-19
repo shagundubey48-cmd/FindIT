@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { User, Mail, Lock, Eye, EyeOff } from "lucide-react";
@@ -61,14 +60,15 @@ export default function Register() {
     try {
       setLoading(true);
 
-      await register({
+      const result = await register({
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
       });
 
       setSuccess(
-        "Registration successful! Please check your college email for the verification link."
+        result?.message ||
+          "Registration successful! Please check your college email for the verification link."
       );
 
       setTimeout(() => {
@@ -227,4 +227,3 @@ export default function Register() {
     </div>
   );
 }
-
