@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from "react";
 import itemService from "../services/itemService";
 import ItemCard from "../components/ItemCard";
@@ -8,6 +7,8 @@ import FilterBar from "../components/FilterBar";
 export default function LostItems() {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState("");
+  // Search text actually sent to the API (updated on submit, not per keystroke).
+  const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [campus, setCampus] = useState("");
   const [loading, setLoading] = useState(true);
@@ -19,7 +20,7 @@ export default function LostItems() {
       setError("");
 
       const data = await itemService.getItems({
-        q: search,
+        q: query,
         type: "lost",
         category,
         campus
@@ -33,7 +34,7 @@ export default function LostItems() {
     } finally {
       setLoading(false);
     }
-  }, [search, category, campus]);
+  }, [query, category, campus]);
 
   useEffect(() => {
     fetchItems();
@@ -41,6 +42,7 @@ export default function LostItems() {
 
   function clearFilters() {
     setSearch("");
+    setQuery("");
     setCategory("");
     setCampus("");
   }
@@ -60,7 +62,7 @@ export default function LostItems() {
         <SearchBar
           value={search}
           onChange={setSearch}
-          onSearch={fetchItems}
+          onSearch={() => setQuery(search.trim())}
         />
       </div>
 
