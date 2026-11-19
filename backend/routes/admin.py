@@ -1,4 +1,3 @@
-
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request, g
@@ -89,6 +88,36 @@ def get_admin_dashboard():
             status="pending"
         ).count(),
         "total_claims": Claim.query.count()
+    }), 200
+
+
+@admin_bp.route("/admin/users", methods=["GET"])
+@token_required
+def get_all_admin_users():
+    """Allow administrators to view all registered users."""
+
+    access_error = check_admin()
+    if access_error:
+        return access_error
+
+    users = User.query.order_by(User.created_at.desc()).all()
+
+    return jsonify({
+        "count": len(users),
+        "users": [
+            {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "is_verified": user.is_verified,
+                "is_admin": user.is_admin,
+                "created_at": (
+                    user.created_at.isoformat()
+                    if user.created_at else None
+                )
+            }
+            for user in users
+        ]
     }), 200
 
 
