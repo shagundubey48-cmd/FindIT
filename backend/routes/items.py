@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify, g, current_app
 from datetime import date
 from sqlalchemy import or_
@@ -257,17 +256,23 @@ def update_item(item_id):
                     "message": f"{field} cannot be empty"
                 }), 400
 
-    for field in text_fields:
-        if field in data:
-            setattr(item, field, data[field].strip())
+    new_date = None
 
     if "item_date" in data:
         try:
-            item.item_date = date.fromisoformat(data["item_date"])
+            new_date = date.fromisoformat(data["item_date"])
         except (ValueError, TypeError):
             return jsonify({
                 "message": "Invalid date format. Use YYYY-MM-DD"
             }), 400
+
+    # Apply changes only after every field has been validated.
+    for field in text_fields:
+        if field in data:
+            setattr(item, field, data[field].strip())
+
+    if new_date is not None:
+        item.item_date = new_date
 
     db.session.commit()
 
