@@ -1,4 +1,3 @@
-
 import api from "./api";
 
 const itemService = {
@@ -49,6 +48,16 @@ const itemService = {
   async withdrawItem(itemId) {
     const response = await api.patch(`/items/${itemId}/withdraw`);
     return response.data;
+  },
+
+  // Aliases so older call sites keep working
+  async reportFound(itemData) {
+    return this.reportFoundItem(itemData);
+  },
+
+  async getItemDetails(itemId) {
+    const item = await this.getItemById(itemId);
+    return { item };
   },
 
   async getMatches(itemId) {
