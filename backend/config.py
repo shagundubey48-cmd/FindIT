@@ -1,4 +1,3 @@
-
 import os
 import certifi
 from dotenv import load_dotenv
@@ -76,3 +75,7 @@ class TestConfig(Config):
 
     TESTING = True
     MAIL_SUPPRESS_SEND = True
+
+    # The tests sign their own JWTs with this key, so it must not depend
+    # on whatever SECRET_KEY happens to be in the developer's .env file.
+    SECRET_KEY = "test-secret"
