@@ -1,9 +1,9 @@
-
 from functools import wraps
 
 import jwt
 from flask import request, jsonify, current_app, g
 
+from app import db
 from models.user import User
 
 
@@ -31,7 +31,7 @@ def token_required(func):
                 algorithms=["HS256"]
             )
 
-            user = User.query.get(int(payload["sub"]))
+            user = db.session.get(User, int(payload["sub"]))
 
             if not user:
                 return jsonify({"message": "User not found"}), 401
@@ -44,4 +44,3 @@ def token_required(func):
         return func(*args, **kwargs)
 
     return decorated
-
