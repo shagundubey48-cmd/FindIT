@@ -104,7 +104,7 @@ DEMO_ITEMS = [
     },
     {
         "owner": "demo.aarav@mail.jiit.ac.in",
-        "title": "透明 spectacles case",
+        "title": "Clear spectacles case",
         "description": "Clear hard-shell spectacles case. DEMO SAMPLE — fictional report for presentation; not a real found item.",
         "category": "Accessories",
         "campus": "JIIT Sector 62",
