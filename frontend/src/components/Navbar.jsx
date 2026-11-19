@@ -4,12 +4,19 @@ import { Menu, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import NotificationBell from "./NotificationBell";
 
+// Links available to every signed-in user.
 const userLinks = [
+  ["/dashboard", "Dashboard"],
   ["/lost-items", "Lost Items"],
   ["/found-items", "Found Items"],
+  ["/report-lost", "Report Lost"],
+  ["/report-found", "Report Found"],
   ["/my-reports", "My Reports"],
+  ["/matched-items", "Matched Items"],
   ["/my-claims", "My Claims"],
+  ["/my-handovers", "My Handovers"],
   ["/messages", "Messages"],
+  ["/feedback", "Feedback"],
 ];
 
 export default function Navbar() {
@@ -24,7 +31,7 @@ export default function Navbar() {
   };
 
   const linkClass = ({ isActive }) =>
-    `rounded-lg px-3 py-2 text-sm font-medium ${
+    `block whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium ${
       isActive
         ? "bg-indigo-50 text-indigo-700"
         : "text-slate-600 hover:bg-slate-100"
@@ -32,13 +39,13 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-white/95 backdrop-blur">
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-        <Link to="/" className="text-2xl font-bold text-primary">
+      <nav className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
+        <Link to="/" className="shrink-0 text-2xl font-bold text-primary">
           FindIT.
         </Link>
 
-        {/* Desktop links */}
-        <div className="hidden items-center gap-1 lg:flex">
+        {/* Desktop navigation; scroll horizontally when the screen is narrow. */}
+        <div className="hidden min-w-0 flex-1 items-center justify-start gap-1 overflow-x-auto lg:flex">
           {isAuthenticated &&
             userLinks.map(([to, label]) => (
               <NavLink key={to} to={to} className={linkClass}>
@@ -47,12 +54,12 @@ export default function Navbar() {
             ))}
           {isAuthenticated && user?.is_admin && (
             <NavLink to="/admin" className={linkClass}>
-              Admin
+              Admin Dashboard
             </NavLink>
           )}
         </div>
 
-        <div className="hidden items-center gap-3 lg:flex">
+        <div className="hidden shrink-0 items-center gap-3 lg:flex">
           {isAuthenticated ? (
             <>
               <NotificationBell />
@@ -87,17 +94,18 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile toggle */}
+        {/* Mobile menu toggle */}
         <button
           className="rounded-lg p-2 text-slate-700 hover:bg-slate-100 lg:hidden"
           onClick={() => setOpen((value) => !value)}
           aria-label="Toggle menu"
+          aria-expanded={open}
         >
           {open ? <X size={22} /> : <Menu size={22} />}
         </button>
       </nav>
 
-      {/* Mobile menu */}
+      {/* Mobile navigation */}
       {open && (
         <div
           className="space-y-1 border-t bg-white px-4 py-3 lg:hidden"
@@ -118,7 +126,7 @@ export default function Navbar() {
               </NavLink>
               {user?.is_admin && (
                 <NavLink to="/admin" className={linkClass}>
-                  Admin
+                  Admin Dashboard
                 </NavLink>
               )}
               <button
