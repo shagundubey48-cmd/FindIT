@@ -1,4 +1,3 @@
-
 name: FindIt+ Backend Tests
 
 on:
@@ -39,14 +38,15 @@ jobs:
           cd backend
           pip install -r requirements.txt
 
-      - name: Run registration tests
+      - name: Run backend tests
         env:
           SECRET_KEY: test-secret
+          DB_PORT: 3306
           DB_HOST: 127.0.0.1
           DB_USER: root
           DB_PASSWORD: root
           DB_NAME: finditplus_test
+          DISABLE_IMAGE_MATCHING: "true"
         run: |
           cd backend
           pytest tests/ -v
-
