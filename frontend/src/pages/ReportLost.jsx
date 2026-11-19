@@ -1,7 +1,7 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import itemService from "../services/itemService";
+import { CATEGORIES, CAMPUSES } from "../utils/constants";
 
 export default function ReportLost() {
   const navigate = useNavigate();
@@ -33,8 +33,16 @@ export default function ReportLost() {
 
       const result = await itemService.reportLostItem(form);
 
+      // The report already exists at this point. If only the image fails,
+      // keep the report (retrying would create a duplicate) and go on.
       if (image && result.item?.id) {
-        await itemService.uploadImage(result.item.id, image);
+        try {
+          await itemService.uploadImage(result.item.id, image);
+        } catch {
+          window.alert(
+            "Your report was saved, but the image could not be uploaded."
+          );
+        }
       }
 
       navigate(`/items/${result.item.id}`);
@@ -94,13 +102,9 @@ export default function ReportLost() {
             className="w-full rounded-lg border border-gray-300 px-4 py-3"
           >
             <option value="">Select category</option>
-            <option>Electronics</option>
-            <option>Accessories</option>
-            <option>Bags</option>
-            <option>Clothing</option>
-            <option>Stationery</option>
-            <option>Documents</option>
-            <option>Other</option>
+            {CATEGORIES.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
           </select>
         </div>
 
@@ -114,8 +118,9 @@ export default function ReportLost() {
             className="w-full rounded-lg border border-gray-300 px-4 py-3"
           >
             <option value="">Select campus</option>
-            <option value="JIIT Sector 62">JIIT Sector 62</option>
-            <option value="JIIT Sector 128">JIIT Sector 128</option>
+            {CAMPUSES.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
           </select>
         </div>
 
@@ -139,7 +144,7 @@ export default function ReportLost() {
             value={form.item_date}
             onChange={handleChange}
             required
-            max={new Date().toISOString().split("T")[0]}
+            max={new Date().toLocaleDateString("en-CA")}
             className="w-full rounded-lg border border-gray-300 px-4 py-3"
           />
         </div>
