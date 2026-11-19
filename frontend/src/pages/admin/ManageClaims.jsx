@@ -1,12 +1,68 @@
-import { useEffect,useState } from "react";
-import api from "../../services/api";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { getAdminClaims } from "../../services/adminService";
 import Loader from "../../components/Loader";
-import {getErrorMessage,titleCase,formatDate} from "../../utils/helpers";
-export default function ManageClaims(){const [data,setData]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[remarks,setRemarks]=useState({});
-const load=async()=>{try{const r=await api.get("/admin/claims");setData(r.data);}catch(e){setError(getErrorMessage(e));}finally{setLoading(false);}};useEffect(()=>{load();},[]);
-const decide=async(id,status)=>{try{await api.patch(`/admin/claims/${id}/decision`,{status,admin_remarks:remarks[id]||"Reviewed by administrator"});await load();}catch(e){setError(getErrorMessage(e));}};
-const moderate=async(id,status)=>{try{await api.patch(`/admin/items/${id}/moderation`,{status,admin_remarks:remarks[id]||"Reviewed by administrator"});await load();}catch(e){setError(getErrorMessage(e));}};
-if(loading)return <Loader/>;const rows=data?.claims||data?.items||data?.claims||[];
-return <main className="mx-auto max-w-6xl px-5 py-10"><h1 className="mb-6 text-3xl font-bold">Manage claims</h1>{error&&<p className="mb-4 rounded bg-red-50 p-3 text-red-700">{error}</p>}{data&&!Array.isArray(data)&&!rows.length&&<div className="grid gap-4 sm:grid-cols-3">{Object.entries(data).map(([k,v])=><div className="rounded-2xl border bg-white p-5" key={k}><p className="text-sm text-slate-500">{titleCase(k)}</p><p className="mt-2 text-3xl font-bold">{String(v)}</p></div>)}</div>}
-<div className="space-y-4">{rows.map(r=><article key={r.id} className="rounded-2xl border bg-white p-5"><div className="flex flex-wrap justify-between gap-3"><div><h2 className="font-bold">{r.title||r.item_title||`#${r.id}`}</h2><p className="text-sm text-slate-500">{r.claimant_name||r.item_type||r.email||""}</p><p className="mt-1 text-xs text-slate-400">{formatDate(r.created_at)}</p></div><span className="h-fit rounded-full bg-indigo-50 px-3 py-1 text-xs text-indigo-700">{titleCase(r.status)}</span></div>{r.ownership_details&&<p className="mt-3 text-sm">{r.ownership_details}</p>}<textarea value={remarks[r.id]||""} onChange={e=>setRemarks({...remarks,[r.id]:e.target.value})} placeholder="Administrator remarks" className="mt-3 w-full rounded-lg border p-3"/><div className="mt-3 flex flex-wrap gap-2">{r.status==="pending"&&<><button onClick={()=>decide(r.id,"approved")} className="rounded-lg bg-green-600 px-4 py-2 text-white">Approve claim</button><button onClick={()=>decide(r.id,"rejected")} className="rounded-lg bg-red-600 px-4 py-2 text-white">Reject claim</button></>}{r.item_type&&<><button onClick={()=>moderate(r.id,"active")} className="rounded-lg border px-3 py-2">Set active</button><button onClick={()=>moderate(r.id,"resolved")} className="rounded-lg border px-3 py-2">Resolve</button><button onClick={()=>moderate(r.id,"removed")} className="rounded-lg border px-3 py-2">Remove</button></>}</div></article>)}</div></main>}
+import { formatDate, getErrorMessage, statusClasses, titleCase } from "../../utils/helpers";
 
+const FILTERS = ["all", "pending", "approved", "rejected"];
+
+export default function ManageClaims() {
+  const [claims, setClaims] = useState([]);
+  const [filter, setFilter] = useState("pending");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    getAdminClaims()
+      .then((res) => setClaims(res.data.claims || []))
+      .catch((err) => setError(getErrorMessage(err)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <Loader />;
+
+  const rows = claims.filter((c) => filter === "all" || c.status === filter);
+
+  return (
+    <main className="mx-auto max-w-6xl px-5 py-10">
+      <h1 className="mb-6 text-3xl font-bold">Manage claims</h1>
+      {error && <p className="mb-4 rounded bg-red-50 p-3 text-red-700">{error}</p>}
+
+      <div className="mb-5 flex flex-wrap gap-2">
+        {FILTERS.map((name) => (
+          <button
+            key={name}
+            onClick={() => setFilter(name)}
+            className={`rounded-full px-4 py-2 text-sm ${filter === name ? "bg-primary text-white" : "border bg-white"}`}
+          >
+            {titleCase(name)}
+          </button>
+        ))}
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="rounded-2xl border bg-white p-10 text-center text-slate-500">No claims.</p>
+      ) : (
+        <div className="space-y-3">
+          {rows.map((c) => (
+            <article key={c.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white p-5">
+              <div>
+                <h2 className="font-bold">{c.item_title}</h2>
+                <p className="text-sm text-slate-500">{c.claimant_name} · {c.claimant_email}</p>
+                <p className="text-xs text-slate-400">{formatDate(c.created_at)}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClasses(c.status)}`}>
+                  {titleCase(c.status)}
+                </span>
+                <Link to={`/admin/claims/${c.id}`} className="rounded-lg bg-primary px-4 py-2 text-sm text-white">
+                  Review
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </main>
+  );
+}
