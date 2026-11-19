@@ -1,26 +1,157 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import api from "../services/api";
+import {
+  getConversations,
+  getMessages,
+  sendMessage,
+} from "../services/messageService";
 import Loader from "../components/Loader";
-import { getErrorMessage, formatDate, titleCase } from "../utils/helpers";
+import { formatDateTime, getErrorMessage } from "../utils/helpers";
 
-export default function MatchedItems() {
-  const [rows,setRows]=useState([]);
-  const [loading,setLoading]=useState(true);
-  const [error,setError]=useState("");
-  const [notice,setNotice]=useState("");
-  const [busy,setBusy]=useState(false);
-  const [remarks,setRemarks]=useState("");
-  const [query,setQuery]=useState("");
-  const [selected,setSelected]=useState(null);
-  const load=async()=>{setLoading(true);setError("");try{const {data}=await api.get("/items/1/matched-items");setRows(data.matches||data.items||data.claims||data.handovers||data.notifications||data.conversations||[]);}catch(e){setError(getErrorMessage(e));}finally{setLoading(false);}};
-  useEffect(()=>{load();},[]);
-  const act=async(id,method,url,payload)=>{setBusy(true);setError("");setNotice("");try{await api[method](url,payload);setNotice("Updated successfully.");await load();}catch(e){setError(getErrorMessage(e));}finally{setBusy(false);}};
-  const filtered=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(query.toLowerCase()));
-  return <main className="mx-auto max-w-6xl px-5 py-10"><div className="mb-7 flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">FindIT workspace</p><h1 className="mt-1 text-3xl font-bold">Matched items</h1><p className="mt-2 text-slate-500">Review and manage your FindIT activity.</p></div><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search..." className="rounded-xl border px-4 py-3 outline-none focus:border-indigo-500"/></div>
-  {notice&&<p className="mb-4 rounded-xl bg-green-50 p-3 text-green-700">{notice}</p>}{error&&<p className="mb-4 rounded-xl bg-red-50 p-3 text-red-700">{error}</p>}
-  {loading?<Loader/>:filtered.length===0?<div className="rounded-2xl border bg-white p-10 text-center text-slate-500">Nothing to show yet.</div>:<div className="grid gap-4 md:grid-cols-2">{filtered.map((r,i)=><article key={r.id??i} className="rounded-2xl border bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h2 className="font-bold text-slate-900">{r.title||r.item_title||r.message||r.name||`Record #${r.id}`}</h2><p className="mt-1 text-sm text-slate-500">{r.description||r.item_type||r.other_party||r.email||""}</p></div><span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">{titleCase(r.status||"available")}</span></div><p className="mt-3 text-sm text-slate-600">{r.location||r.admin_remarks||r.handover_notes||r.ownership_details||""}</p><p className="mt-3 text-xs text-slate-400">{formatDate(r.created_at||r.item_date||r.handed_over_at)}</p>{r.image_url&&<img src={r.image_url} alt={r.title||"Item"} className="mt-3 h-40 w-full rounded-xl object-cover"/>}<div className="mt-4 flex flex-wrap gap-2">{r.item_id&&<Link to={`/items/${r.item_id}`} className="rounded-lg border px-3 py-2 text-sm">View item</Link>}{r.id&&<button onClick={()=>setSelected(r)} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white">Details</button>}</div></article>)}</div>}
-  {selected&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={()=>setSelected(null)}><div className="max-h-[85vh] w-full max-w-xl overflow-auto rounded-2xl bg-white p-6" onClick={e=>e.stopPropagation()}><div className="mb-4 flex justify-between"><h2 className="text-xl font-bold">Record details</h2><button onClick={()=>setSelected(null)}>✕</button></div><pre className="whitespace-pre-wrap break-words text-xs">{JSON.stringify(selected,null,2)}</pre></div></div>}
-  </main>;
+export default function Messages() {
+  const [conversations, setConversations] = useState([]);
+  const [activeId, setActiveId] = useState(null);
+  const [thread, setThread] = useState([]);
+  const [body, setBody] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  const loadConversations = useCallback(async () => {
+    try {
+      const { data } = await getConversations();
+      setConversations(data.conversations || []);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  const openConversation = useCallback(async (id) => {
+    try {
+      setError("");
+      setActiveId(id);
+      const { data } = await getMessages(id);
+      setThread(data.messages || []);
+      // Opening a conversation marks its messages as read.
+      await loadConversations();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  }, [loadConversations]);
+
+  const handleSend = async (event) => {
+    event.preventDefault();
+    if (!body.trim() || !activeId) return;
+
+    try {
+      setSending(true);
+      setError("");
+      await sendMessage(activeId, body.trim());
+      setBody("");
+      await openConversation(activeId);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const active = conversations.find((c) => c.id === activeId);
+
+  if (loading) return <Loader />;
+
+  return (
+    <main className="mx-auto max-w-5xl px-5 py-10">
+      <h1 className="text-3xl font-bold">Messages</h1>
+      <p className="mt-2 text-slate-500">
+        Chats are anonymous — real identities are never shown.
+      </p>
+
+      {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}
+
+      {conversations.length === 0 ? (
+        <div className="mt-6 rounded-2xl border bg-white p-10 text-center text-slate-500">
+          No conversations yet. Open an item and use "Message reporter" to start one.
+        </div>
+      ) : (
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <ul className="space-y-2">
+            {conversations.map((c) => (
+              <li key={c.id}>
+                <button
+                  onClick={() => openConversation(c.id)}
+                  className={`w-full rounded-xl border p-3 text-left ${
+                    c.id === activeId ? "border-indigo-500 bg-indigo-50" : "bg-white"
+                  }`}
+                >
+                  <p className="truncate font-semibold">{c.item_title}</p>
+                  <p className="text-xs text-slate-500">{c.other_party}</p>
+                  {c.last_message && (
+                    <p className="mt-1 truncate text-sm text-slate-600">{c.last_message.body}</p>
+                  )}
+                  {c.unread_count > 0 && (
+                    <span className="mt-1 inline-block rounded-full bg-red-500 px-2 text-xs text-white">
+                      {c.unread_count} new
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <section className="rounded-2xl border bg-white p-4 md:col-span-2">
+            {!active ? (
+              <p className="py-10 text-center text-slate-500">Select a conversation.</p>
+            ) : (
+              <>
+                <div className="mb-3 flex items-center justify-between border-b pb-3">
+                  <div>
+                    <h2 className="font-bold">{active.item_title}</h2>
+                    <p className="text-xs text-slate-500">with {active.other_party}</p>
+                  </div>
+                  <Link to={`/items/${active.item_id}`} className="text-sm text-primary">View item</Link>
+                </div>
+
+                <div className="max-h-96 space-y-2 overflow-y-auto">
+                  {thread.map((m) => (
+                    <div key={m.id} className={`flex ${m.is_mine ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${m.is_mine ? "bg-primary text-white" : "bg-slate-100"}`}>
+                        <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                        <p className={`mt-1 text-[10px] ${m.is_mine ? "text-indigo-200" : "text-slate-400"}`}>
+                          {formatDateTime(m.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <form onSubmit={handleSend} className="mt-4 flex gap-2">
+                  <input
+                    value={body}
+                    onChange={(e) => setBody(e.target.value)}
+                    maxLength={1000}
+                    placeholder="Type a message..."
+                    className="flex-1 rounded-lg border px-4 py-2"
+                  />
+                  <button
+                    type="submit"
+                    disabled={sending || !body.trim()}
+                    className="rounded-lg bg-primary px-5 py-2 text-white disabled:opacity-60"
+                  >
+                    Send
+                  </button>
+                </form>
+              </>
+            )}
+          </section>
+        </div>
+      )}
+    </main>
+  );
 }
-
