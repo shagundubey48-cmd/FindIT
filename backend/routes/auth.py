@@ -65,17 +65,25 @@ def register():
     if User.query.filter_by(email=email).first():
         return jsonify({"message": "Email already registered"}), 409
 
+    require_verification = current_app.config.get(
+        "REQUIRE_EMAIL_VERIFICATION", True
+    )
+
     token = secrets.token_urlsafe(32)
 
     new_user = User(
         name=name,
         email=email,
         password=generate_password_hash(password),
-        is_verified=False,
-        verification_token_hash=hashlib.sha256(token.encode()).hexdigest(),
+        is_verified=not require_verification,
+        verification_token_hash=(
+            hashlib.sha256(token.encode()).hexdigest()
+            if require_verification else None
+        ),
         verification_token_expires_at=(
             datetime.now(timezone.utc).replace(tzinfo=None)
             + timedelta(minutes=15)
+            if require_verification else None
         )
     )
 
@@ -85,6 +93,11 @@ def register():
     except IntegrityError:
         db.session.rollback()
         return jsonify({"message": "Email already registered"}), 409
+
+    if not require_verification:
+        return jsonify({
+            "message": "Registration successful. You can now log in."
+        }), 201
 
     try:
         send_verification_email(email, token)
