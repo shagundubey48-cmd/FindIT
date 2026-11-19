@@ -1,10 +1,99 @@
-import { createContext, useCallback, useEffect, useState } from "react";
-import api from "../services/api";
-export const NotificationContext=createContext(null);
-export function NotificationProvider({children}){const [notifications,setNotifications]=useState([]);const [unreadCount,setUnreadCount]=useState(0);
- const refresh=useCallback(async()=>{if(!localStorage.getItem("token")){setNotifications([]);setUnreadCount(0);return;}try{const {data}=await api.get("/notifications");setNotifications(data.notifications||[]);setUnreadCount(data.unread_count||0);}catch{setNotifications([]);setUnreadCount(0);}},[]);
- useEffect(()=>{refresh();},[refresh]);
- const markRead=async id=>{await api.patch(`/notifications/${id}/read`);await refresh();};
- return <NotificationContext.Provider value={{notifications,unreadCount,refresh,markRead}}>{children}</NotificationContext.Provider>;
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
+import authService from "../services/authService";
+
+export const AuthContext = createContext(null);
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check existing login session
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const data = await authService.getProfile();
+
+        setUser(data.user || data);
+      } catch (error) {
+        authService.logout();
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // Login
+  const login = async (credentials) => {
+    const data = await authService.login(credentials);
+
+    if (data.token || data.access_token) {
+      const profile = await authService.getProfile();
+      setUser(profile.user || profile);
+    }
+
+    return data;
+  };
+
+  // Register
+  const register = async (userData) => {
+    return await authService.register(userData);
+  };
+
+  // Logout
+  const logout = () => {
+    authService.logout();
+    setUser(null);
+  };
+
+  // Update profile (merge so fields like is_admin are not lost)
+  const updateProfile = async (userData) => {
+    const data = await authService.updateProfile(userData);
+    setUser((previous) => ({ ...previous, ...(data.user || data) }));
+    return data;
+  };
+
+  const value = {
+    user,
+    loading,
+    isAuthenticated: Boolean(user),
+    login,
+    register,
+    logout,
+    updateProfile,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
+// Custom authentication hook
+export function useAuth() {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error(
+      "useAuth must be used inside AuthProvider"
+    );
+  }
+
+  return context;
+}
