@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
@@ -33,7 +32,7 @@ export default function Login() {
       return;
     }
 
-    if (!form.email.endsWith("@mail.jiit.ac.in")) {
+    if (!form.email.trim().toLowerCase().endsWith("@mail.jiit.ac.in")) {
       setError("Please use your JIIT college email.");
       return;
     }
@@ -41,7 +40,10 @@ export default function Login() {
     try {
       setLoading(true);
 
-      await login(form);
+      await login({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      });
 
       navigate("/dashboard");
     } catch (err) {
@@ -155,4 +157,3 @@ export default function Login() {
     </div>
   );
 }
-
