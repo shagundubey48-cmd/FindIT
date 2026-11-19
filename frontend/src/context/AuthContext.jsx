@@ -1,5 +1,3 @@
-
-
 import {
   createContext,
   useContext,
@@ -63,10 +61,10 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  // Update profile
+  // Update profile (merge so fields like is_admin are not lost)
   const updateProfile = async (userData) => {
     const data = await authService.updateProfile(userData);
-    setUser(data.user || data);
+    setUser((previous) => ({ ...previous, ...(data.user || data) }));
     return data;
   };
 
