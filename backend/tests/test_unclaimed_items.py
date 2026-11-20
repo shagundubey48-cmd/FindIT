@@ -56,7 +56,7 @@ from models.claim import Claim
 
 def old_item(user, days_old, **kwargs):
     item = create_item(user, **kwargs)
-    item.created_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days_old)
+        item.created_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days_old, minutes=1)
     db.session.commit()
     return item
 
