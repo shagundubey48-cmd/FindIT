@@ -63,7 +63,6 @@ export default function Profile() {
 
         <p className="text-sm text-slate-500">
           Member since {formatDate(user?.created_at)}
-          {user?.is_verified ? " · Email verified" : ""}
           {user?.is_admin ? " · Administrator" : ""}
         </p>
 
