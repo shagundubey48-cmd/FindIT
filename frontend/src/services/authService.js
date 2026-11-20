@@ -21,15 +21,6 @@ const authService = {
     return response.data;
   },
 
-  // Verify email
-  verifyEmail: async (token) => {
-    const response = await api.get(
-      `/verify/${encodeURIComponent(token)}`
-    );
-
-    return response.data;
-  },
-
   // Get logged-in user profile
   getProfile: async () => {
     const response = await api.get("/profile");
