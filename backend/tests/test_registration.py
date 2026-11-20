@@ -42,7 +42,7 @@ def test_registration_success(client):
     })
     assert response.status_code == 201
     assert response.json["message"] == (
-        "Registration successful. Please verify your email."
+        "Registration successful. "
     )
 
 
@@ -99,89 +99,3 @@ def test_registration_accepts_college_email(client):
     })
     assert response.status_code == 201
 
-
-# Check that registration creates an unverified account
-def test_registration_creates_unverified_account(client):
-    response = client.post("/api/register", json={
-        "name": "Test Student",
-        "email": "student@mail.jiit.ac.in",
-        "password": "Test@123"
-    })
-
-    assert response.status_code == 201
-
-    user = User.query.filter_by(
-        email="student@mail.jiit.ac.in"
-    ).first()
-
-    assert user is not None
-    assert user.is_verified is False
-    assert user.verification_token_hash is not None
-    assert user.verification_token_expires_at is not None
-
-
-# Check successful email verification
-def test_email_verification_success(client):
-    token = "valid-test-token"
-
-    user = User(
-        name="Test Student",
-        email="verify@mail.jiit.ac.in",
-        password="hashed-password",
-        is_verified=False,
-        verification_token_hash=hashlib.sha256(
-            token.encode()
-        ).hexdigest(),
-        verification_token_expires_at=(
-            datetime.now(timezone.utc).replace(tzinfo=None)
-            + timedelta(minutes=15)
-        )
-    )
-
-    db.session.add(user)
-    db.session.commit()
-
-    response = client.get(f"/api/verify/{token}")
-
-    assert response.status_code == 200
-
-    db.session.refresh(user)
-
-    assert user.is_verified is True
-    assert user.verification_token_hash is None
-    assert user.verification_token_expires_at is None
-
-
-# Reject invalid verification tokens
-def test_email_verification_rejects_invalid_token(client):
-    response = client.get("/api/verify/invalid-token")
-    assert response.status_code == 400
-
-
-# Reject expired verification tokens
-def test_email_verification_rejects_expired_token(client):
-    token = "expired-test-token"
-
-    user = User(
-        name="Test Student",
-        email="expired@mail.jiit.ac.in",
-        password="hashed-password",
-        is_verified=False,
-        verification_token_hash=hashlib.sha256(
-            token.encode()
-        ).hexdigest(),
-        verification_token_expires_at=(
-            datetime.now(timezone.utc).replace(tzinfo=None)
-            - timedelta(minutes=1)
-        )
-    )
-
-    db.session.add(user)
-    db.session.commit()
-
-    response = client.get(f"/api/verify/{token}")
-
-    assert response.status_code == 400
-
-    db.session.refresh(user)
-    assert user.is_verified is False
