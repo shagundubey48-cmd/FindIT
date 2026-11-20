@@ -8,7 +8,6 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import VerifyEmail from "./pages/VerifyEmail";
 import LostItems from "./pages/LostItems";
 import FoundItems from "./pages/FoundItems";
 import ReportLost from "./pages/ReportLost";
@@ -37,7 +36,6 @@ function NotFound(){return <main className="p-20 text-center"><h1 className="tex
 export default function App(){return <Routes><Route element={<Layout/>}>
 <Route index element={<Home/>}/>
 <Route element={<GuestRoute/>}><Route path="login" element={<Login/>}/><Route path="register" element={<Register/>}/></Route>
-<Route path="verify-email" element={<VerifyEmail/>}/>
 <Route element={<ProtectedRoute/>}>
 <Route path="lost-items" element={<LostItems/>}/><Route path="found-items" element={<FoundItems/>}/><Route path="dashboard" element={<Dashboard/>}/><Route path="report-lost" element={<ReportLost/>}/><Route path="report-found" element={<ReportFound/>}/><Route path="my-reports" element={<MyReports/>}/><Route path="items/:id" element={<ItemDetails/>}/><Route path="matched-items" element={<MatchedItems/>}/><Route path="claims/:id" element={<ClaimDetails/>}/><Route path="my-claims" element={<MyClaims/>}/><Route path="my-handovers" element={<MyHandovers/>}/><Route path="messages" element={<Messages/>}/><Route path="notifications" element={<Notifications/>}/><Route path="profile" element={<Profile/>}/><Route path="feedback" element={<Feedback/>}/>
 </Route>
