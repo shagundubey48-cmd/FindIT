@@ -68,7 +68,7 @@ export default function Register() {
 
       setSuccess(
         result?.message ||
-          "Registration successful! Please check your college email for the verification link."
+          "Registration successful! You can now log in. "
       );
 
       setTimeout(() => {
