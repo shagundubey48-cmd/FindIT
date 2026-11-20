@@ -3,7 +3,6 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 
 from config import Config
-from extensions import mail
 
 
 db = SQLAlchemy()
@@ -17,7 +16,6 @@ def create_app(config_class=Config):
     CORS(app)
 
     db.init_app(app)
-    mail.init_app(app)
 
     from routes.auth import auth_bp
     from routes.items import items_bp
