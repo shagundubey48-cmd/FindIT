@@ -1,11 +1,3 @@
-
-import hashlib
-from datetime import datetime, timedelta, timezone
-
-from app import db
-from models.user import User
-
-
 # Check registration when name is missing
 def test_registration_requires_name(client):
     response = client.post("/api/register", json={
@@ -42,7 +34,7 @@ def test_registration_success(client):
     })
     assert response.status_code == 201
     assert response.json["message"] == (
-        "Registration successful. "
+        "Registration successful. You can now log in."
     )
 
 
@@ -98,4 +90,3 @@ def test_registration_accepts_college_email(client):
         "password": "Test@123"
     })
     assert response.status_code == 201
-
