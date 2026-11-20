@@ -28,12 +28,3 @@ def app():
 @pytest.fixture
 def client(app):
     return app.test_client()
-
-
-# Prevent real verification emails during tests
-@pytest.fixture(autouse=True)
-def suppress_verification_emails(monkeypatch):
-    monkeypatch.setattr(
-        "routes.auth.send_verification_email",
-        lambda email, token: None
-    )
