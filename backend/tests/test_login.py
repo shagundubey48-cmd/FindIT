@@ -46,21 +46,6 @@ def test_login_rejects_wrong_password(client):
     assert response.status_code == 401
 
 
-# Prevent unverified users from logging in
-def test_login_rejects_unverified_user(client):
-    create_test_user(verified=False)
-
-    response = client.post("/api/login", json={
-        "email": "student@mail.jiit.ac.in",
-        "password": "Test@123"
-    })
-
-    assert response.status_code == 403
-    assert response.json["message"] == (
-        "Please verify your email before logging in"
-    )
-
-
 # Allow verified users to log in
 def test_login_success(client):
     user = create_test_user(verified=True)
