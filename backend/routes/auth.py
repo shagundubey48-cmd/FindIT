@@ -62,23 +62,24 @@ def register():
     if User.query.filter_by(email=email).first():
         return jsonify({"message": "Email already registered"}), 409
 
-   new_user = User(
-    name=name,
-    email=email,
-    password=generate_password_hash(password),
-    is_verified=True
-)
+    new_user = User(
+        name=name,
+        email=email,
+        password=generate_password_hash(password),
+        is_verified=True
+    )
 
-try:
-    db.session.add(new_user)
-    db.session.commit()
-except IntegrityError:
-    db.session.rollback()
-    return jsonify({"message": "Email already registered"}), 409
+    try:
+        db.session.add(new_user)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"message": "Email already registered"}), 409
 
-return jsonify({
-    "message": "Registration successful. You can now log in."
-}), 201
+    return jsonify({
+        "message": "Registration successful. You can now log in."
+    }), 201
+
 
 # Log in an existing user
 @auth_bp.route("/login", methods=["POST"])
