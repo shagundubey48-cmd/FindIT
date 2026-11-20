@@ -11,11 +11,6 @@ class Config:
 
     ALLOWED_EMAIL_DOMAINS = ["mail.jiit.ac.in"]
 
-    # Set REQUIRE_EMAIL_VERIFICATION=false to let users log in right after
-    # registering (no verification email is sent).
-    REQUIRE_EMAIL_VERIFICATION = (
-        os.getenv("REQUIRE_EMAIL_VERIFICATION", "true").lower() != "false"
-    )
 
     # MySQL / TiDB database connection
     DB_HOST = os.getenv("DB_HOST", "localhost")
@@ -80,8 +75,6 @@ class TestConfig(Config):
     )
 
     TESTING = True
-    REQUIRE_EMAIL_VERIFICATION = True
-    MAIL_SUPPRESS_SEND = True
 
     # The tests sign their own JWTs with this key, so it must not depend
     # on whatever SECRET_KEY happens to be in the developer's .env file.
