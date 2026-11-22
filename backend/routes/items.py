@@ -7,6 +7,7 @@ from models.item import Item
 from utils.auth_middleware import token_required
 from services.cloudinary_service import upload_item_image
 from services.matching_service import find_text_matches
+from models.claim import Claim
 
 
 items_bp = Blueprint("items", __name__)
@@ -203,17 +204,31 @@ def get_items():
     }), 200
 
 
-# View details of one active item
+# View details of one item. Active items are visible to everyone;
+# claimed or resolved items only to the reporter, claimant or an admin.
 @items_bp.route("/items/<int:item_id>", methods=["GET"])
 @token_required
 def get_item_details(item_id):
-    item = Item.query.filter_by(
-        id=item_id,
-        status="active"
-    ).first()
+    item = db.session.get(Item, item_id)
 
     if not item:
         return jsonify({"message": "Item not found"}), 404
+
+    if item.status != "active":
+        user = g.current_user
+        involved = (
+            item.user_id == user.id
+            or Claim.query.filter_by(
+                item_id=item.id,
+                claimant_id=user.id
+            ).first() is not None
+        )
+
+        if not (
+            user.is_admin
+            or (item.status in ("claimed", "resolved") and involved)
+        ):
+            return jsonify({"message": "Item not found"}), 404
 
     return jsonify({"item": serialize_item(item)}), 200
 
