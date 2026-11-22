@@ -32,9 +32,15 @@ const itemService = {
     const formData = new FormData();
     formData.append("image", imageFile);
 
+    // api.js sets a default "Content-Type: application/json", which makes
+    // axios convert FormData to JSON and drop the file. Override it here.
     const response = await api.post(
       `/items/${itemId}/image`,
-      formData
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 60000
+      }
     );
 
     return response.data;
