@@ -60,7 +60,9 @@ def serialize_admin_item(item):
             item.moderated_at.isoformat()
             if item.moderated_at else None
         ),
-        "created_at": item.created_at.isoformat()
+        "created_at": (
+            item.created_at.isoformat() if item.created_at else None
+        )
     }
 
 
